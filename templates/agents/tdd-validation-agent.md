@@ -160,7 +160,6 @@ Task X validation: PASSED ✅
 All tests passing, build successful, TDD compliance verified.
 Task X ready for closure.
 
-Use the task-orchestrator subagent to continue systematic TDD validation workflow - proceed to next task validation and close current completed task.
 ```
 
 ### **WHEN VALIDATION FAILS (MANDATORY):**
@@ -170,7 +169,6 @@ Critical issues found: [list specific failures]
 
 BLOCKING PROGRESSION - Remediation required before proceeding.
 
-Use the task-orchestrator subagent to deploy remediation agents for Task X infrastructure failures. Deploy [specific-agent-type] to fix [specific issues found]. Re-validate after fixes applied.
 ```
 
 ### **AGENT DEPLOYMENT MAPPING:**

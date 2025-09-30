@@ -75,7 +75,6 @@ for (const analysis of complexityReport.taskAnalyses) {
 - **NO CLAIMS WITHOUT EVIDENCE** - Every research claim must have file evidence
 - **MANDATORY TOOL EXECUTION** - Must actually call MCP tools, not describe them
 - **TDD COMPLETION REQUIRED** - Must provide evidence-based completion report
-- **Do NOT call Task() or emit tokens. End with the 'Use the task-orchestrator subagent …' line.**
 
 ## What I Do:
 
@@ -426,7 +425,6 @@ SAMPLE ENHANCED TASK STRUCTURE (using discovered technologies):
 ### 🚀 TDD HANDOFF PROTOCOL - RESEARCH EVIDENCE PACKAGE
 
 MANDATORY ENDING (no code blocks, no tools):
-Use the task-orchestrator subagent to coordinate implementation with these research‑informed priorities:
 
 **📦 RESEARCH EVIDENCE DELIVERED WITH AUTONOMOUS ANALYSIS:**
 - **Research Cache**: [X] research documents with Context7 findings for discovered technologies (efficient cache strategy applied)

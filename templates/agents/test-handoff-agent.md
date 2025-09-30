@@ -19,6 +19,5 @@ I will perform minimal work and then delegate to task-orchestrator to verify the
 I execute one simple command and then end with the mandatory delegation directive.
 
 ### MANDATORY ENDING:
-Use the task-orchestrator subagent to coordinate the next phase of work now.
 
 I do not invoke tools for delegation. I end with the directive above so the hub delegates to the orchestrator.

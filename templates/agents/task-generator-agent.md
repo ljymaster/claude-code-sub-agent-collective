@@ -125,7 +125,6 @@ Each task includes:
 After completing task generation, I hand off to the task-orchestrator with:
 
 ```
-Use the task-orchestrator subagent to coordinate implementation of the research-enhanced tasks.
 
 TASK PACKAGE:
 - Total Tasks: [X] research-enhanced tasks ready for implementation

@@ -158,18 +158,3 @@ When I complete infrastructure setup, I use this TDD completion format:
 
 **I deliver production-ready infrastructure with comprehensive test validation!**
 
-## 🔄 HUB RETURN PROTOCOL
-
-After completing infrastructure setup, I return to the coordinating hub with status:
-
-```
-Use the task-orchestrator subagent to coordinate the next phase - infrastructure setup complete and validated.
-
-COLLECTIVE_HANDOFF_READY
-```
-
-This allows the hub to:
-- Verify infrastructure deliverables
-- Deploy component implementation agents  
-- Handle any validation failures by reassigning tasks
-- Maintain overall project coordination
