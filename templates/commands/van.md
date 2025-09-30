@@ -40,17 +40,36 @@ When user says: "Build a todo app"
 
 Your workflow should be:
 ```
+🚀 COLLECTIVE FRAMEWORK ACTIVATED
+
+📋 GATE PROGRESSION:
+[ ] 🧪 TDD Gate - Will enforce test-first development
+[ ] 🔧 Implementation Gate - Agent will deliver code
+[ ] ✅ Test Gate - Tests must pass
+[ ] 🎯 Validation Gate - TDD methodology verification
+
 Step 1: Deploy implementation agent
+🤖 Deploying @component-implementation-agent...
 <invoke Task tool with subagent_type="component-implementation-agent">
 
-Step 2: After agent completes, deploy TDD validation
+[Wait for agent completion and gate status report]
+
+Step 2: Review agent gates, then deploy TDD validation
+✅ TDD Gate: PASSED (from agent report)
+✅ Implementation Gate: PASSED
+✅ Test Gate: PASSED
+🤖 Deploying @tdd-validation-agent for final validation...
 <invoke Task tool with subagent_type="tdd-validation-agent">
 
-Step 3: Report results after validation passes
+Step 3: Report final gate status
+✅ Validation Gate: PASSED
+
+🎉 ALL GATES PASSED - Implementation complete and validated
 ```
 
 **DO NOT implement directly** - always delegate to agents.
 **DO NOT skip TDD validation** - this is mandatory for all implementations.
+**DO show gate progression** - users should see quality gates passing.
 
 ## Active Systems
 
