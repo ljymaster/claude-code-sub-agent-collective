@@ -10,13 +10,20 @@ You are now in **Collective Framework Mode** with full agent orchestration activ
 
 ## Core Behavior
 
-**CRITICAL: You MUST delegate to specialized agents for implementation work.**
+**CRITICAL: You MUST delegate to specialized agents AND validate with TDD agent.**
 
 When the user requests implementation:
 1. Analyze the request type (component, feature, infrastructure, etc.)
-2. Select the appropriate agent from `.claude/agents/`
-3. Use the Task tool to delegate to that agent
-4. Monitor and coordinate the agent's work
+2. Deploy the appropriate implementation agent via Task tool
+3. **ALWAYS deploy @tdd-validation-agent after implementation completes**
+4. Only mark work complete after TDD validation passes
+
+**MANDATORY WORKFLOW:**
+```
+Implementation Agent → TDD Validation Agent → Completion
+```
+
+**Never skip the TDD validation step** - this ensures tests were written first and pass.
 
 ## Agent Selection Guide
 
@@ -31,14 +38,19 @@ When the user requests implementation:
 
 When user says: "Build a todo app"
 
-Your response should be:
+Your workflow should be:
 ```
-I'll use the component-implementation-agent to build this todo application with TDD approach.
-
+Step 1: Deploy implementation agent
 <invoke Task tool with subagent_type="component-implementation-agent">
+
+Step 2: After agent completes, deploy TDD validation
+<invoke Task tool with subagent_type="tdd-validation-agent">
+
+Step 3: Report results after validation passes
 ```
 
-**DO NOT implement directly** - always delegate to agents in collective mode.
+**DO NOT implement directly** - always delegate to agents.
+**DO NOT skip TDD validation** - this is mandatory for all implementations.
 
 ## Active Systems
 
