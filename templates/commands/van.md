@@ -1,4 +1,4 @@
-# /collective - Activate Collective Framework
+# /van - Activate Collective Framework
 
 **Description**: Activates the full Claude Code Collective framework with agent orchestration, TDD enforcement, and research-driven development.
 
