@@ -91,6 +91,15 @@ cd ../taskmaster-agent-claude-code
 npx . init                 # Test installation from current directory
 npx . status              # Test status command
 npx . validate            # Test validation
+npx . repair              # Test repair functionality
+npx . clean               # Test cleanup functionality
+```
+
+### Additional Testing Scripts
+```bash
+# Alternative manual/automated testing approaches
+./scripts/test-automated.sh  # Automated testing variant
+./scripts/test-manual.sh     # Manual testing variant
 ```
 
 ## Key Development Files
@@ -100,6 +109,7 @@ npx . validate            # Test validation
 - `lib/installer.js` - NPX installation logic
 - `lib/command-system.js` - Natural language command processing
 - `lib/AgentRegistry.js` - Agent management and lifecycle
+- `lib/file-mapping.js` - Defines template-to-destination mapping for all installed files
 - `bin/claude-code-collective.js` - CLI interface
 
 ### Testing Infrastructure
@@ -170,9 +180,10 @@ npx . validate            # Test validation
 
 ### Adding New Agents
 1. Create agent definition in `templates/agents/agent-name.md`
-2. Update `lib/file-mapping.js` to include in installation
+2. Update `lib/file-mapping.js` - add to `getAgentMapping()` array
 3. Add contract tests in `tests/agents/`
 4. Test via `npm run test:agents`
+5. Test installation: `./scripts/test-local.sh`
 
 ### Modifying Hooks
 1. Edit hook scripts in `templates/hooks/`
@@ -189,19 +200,28 @@ npx . validate            # Test validation
 ## Code Architecture Patterns
 
 ### Agent System
-- **Agent Registry**: Centralized agent tracking and lifecycle management
+- **Agent Registry**: Centralized agent tracking and lifecycle management (lib/AgentRegistry.js:35-120)
 - **Template System**: Handlebars-based template rendering for dynamic agent creation
 - **Spawning System**: Dynamic agent instantiation with proper context loading
+- **File Mapping**: Template-to-destination mapping system (lib/file-mapping.js:20-580)
 
-### Hook System  
+### Hook System
 - **Test-Driven Handoffs**: Automated validation of agent transitions
 - **Behavioral Enforcement**: Hooks enforce TDD and routing requirements
 - **Metrics Collection**: Automated data gathering for research hypotheses
+- **Hook Configuration**: Defined in templates/settings.json.template
 
 ### Command System
 - **Natural Language Processing**: Converts user intent to structured commands
 - **Namespace Routing**: `/collective`, `/agent`, `/gate`, `/van` command spaces
 - **Auto-completion**: Context-aware command suggestions
+- **TaskMaster Integration**: Full command structure in templates/commands/tm/
+
+### Installation System
+- **NPX Distribution**: Package distributed via npm, installed with npx
+- **Template Processing**: All files in templates/ get processed and installed
+- **Directory Structure**: Creates .claude/, .claude-collective/, and root files
+- **Validation**: Built-in validation checks installation integrity
 
 ## Testing Strategy
 
@@ -239,6 +259,8 @@ npx . validate            # Test validation
 - Never manually edit generated files in `.claude/` or `.claude-collective/`
 - Template changes must be tested through full installation cycle
 - Agent definitions follow strict markdown format requirements
+- All templates live in `templates/` directory
+- File mapping is the single source of truth for what gets installed (lib/file-mapping.js:20-580)
 
 ### TDD Requirements
 - All new functionality must have tests first
@@ -266,5 +288,35 @@ When in doubt, follow existing patterns exactly. Ask for clarification before de
 - Use format: `npm version patch -m "chore: release v%s - [summary of changes]"`
 - Example: `npm version patch -m "chore: release v%s - fix CI race conditions and add comprehensive testing"`
 - Never use the default "2.0.7" commit message
+
+## Template System Architecture
+
+The installation system uses a template-based architecture:
+
+1. **Templates Directory Structure**:
+   - `templates/agents/` - 28 agent definitions in markdown format
+   - `templates/hooks/` - 6 hook scripts for TDD enforcement
+   - `templates/commands/` - Core commands + full TaskMaster command tree
+   - `templates/.claude-collective/` - Test framework, metrics, configs
+   - `templates/settings.json.template` - Hook configuration template
+   - `templates/CLAUDE.md` - Behavioral system template
+
+2. **File Mapping System** (lib/file-mapping.js):
+   - `getAgentMapping()` - Maps agent definitions to .claude/agents/
+   - `getHookMapping()` - Maps hooks to .claude/hooks/ with executable permissions
+   - `getCommandMapping()` - Maps commands to .claude/commands/ (including tm/ subdirectory)
+   - `getTestMapping()` - Maps test framework to .claude-collective/tests/
+   - `getConfigMapping()` - Maps configuration files
+   - `getCollectiveMapping()` - Maps behavioral system files to .claude-collective/
+
+3. **Installation Flow**:
+   - User runs `npx claude-code-collective init`
+   - Installer reads file-mapping.js for complete installation manifest
+   - Creates directory structure (.claude/, .claude-collective/)
+   - Copies templates to destinations with proper permissions
+   - Validates installation integrity
+   - Reports success with installed file counts
+
+**Key Implementation Note**: When adding new files to installation, ALWAYS update lib/file-mapping.js. The file mapping is the single source of truth for what gets installed.
 
 This codebase implements a sophisticated agent collective system with strong TDD enforcement and intelligent routing capabilities.
