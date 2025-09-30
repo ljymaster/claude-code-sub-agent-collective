@@ -1,0 +1,99 @@
+#!/bin/bash
+# tdd-gate.sh - TDD enforcement using native decision control
+# Uses Claude 4.5 native hook decision mechanism to block non-TDD changes
+
+INPUT=$(cat)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name')
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty')
+
+# Only gate Edit/Write operations
+if [[ "$TOOL_NAME" != "Edit" && "$TOOL_NAME" != "Write" ]]; then
+    echo '{"allow": true}'
+    exit 0
+fi
+
+# If no file path, allow (might be other operation)
+if [[ -z "$FILE_PATH" || "$FILE_PATH" == "null" ]]; then
+    echo '{"allow": true}'
+    exit 0
+fi
+
+# Check if this is a test file (allow test creation)
+if [[ "$FILE_PATH" =~ \.test\.|\.spec\.|__tests__|\.test/|\.spec/|/tests/ ]]; then
+    echo '{"allow": true, "reason": "Test file modification allowed"}'
+    exit 0
+fi
+
+# Check if this is a documentation file (allow docs)
+if [[ "$FILE_PATH" =~ \.md$|\.txt$|/docs/|CLAUDE\.md|README ]]; then
+    echo '{"allow": true, "reason": "Documentation file allowed"}'
+    exit 0
+fi
+
+# Check if this is a configuration file (allow configs)
+if [[ "$FILE_PATH" =~ package\.json|tsconfig\.json|\.config\.|\.rc$|\.yaml$|\.yml$ ]]; then
+    echo '{"allow": true, "reason": "Configuration file allowed"}'
+    exit 0
+fi
+
+# Extract file directory and base name
+FILE_DIR=$(dirname "$FILE_PATH")
+FILE_NAME=$(basename "$FILE_PATH")
+FILE_BASE="${FILE_NAME%.*}"
+
+# Look for test files matching this implementation file
+TEST_FOUND=false
+
+# Pattern 1: Same directory with .test or .spec extension
+if [[ -f "${FILE_DIR}/${FILE_BASE}.test.ts" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.test.js" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.test.tsx" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.test.jsx" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.ts" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.js" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.tsx" ]] || \
+   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.jsx" ]]; then
+    TEST_FOUND=true
+fi
+
+# Pattern 2: __tests__ subdirectory
+if [[ -d "${FILE_DIR}/__tests__" ]]; then
+    if [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.ts" ]] || \
+       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.js" ]] || \
+       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.ts" ]] || \
+       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.js" ]]; then
+        TEST_FOUND=true
+    fi
+fi
+
+# Pattern 3: tests directory at project root
+if [[ -d "tests" ]]; then
+    # Find any test file containing the base name
+    if find tests -name "*${FILE_BASE}*test*" -o -name "*${FILE_BASE}*spec*" 2>/dev/null | grep -q .; then
+        TEST_FOUND=true
+    fi
+fi
+
+# Pattern 4: Check for test directory parallel to source
+if [[ "$FILE_DIR" =~ ^(src|lib)/ ]]; then
+    TEST_DIR=$(echo "$FILE_DIR" | sed 's/^src/tests/' | sed 's/^lib/tests/')
+    if [[ -f "${TEST_DIR}/${FILE_BASE}.test.ts" ]] || \
+       [[ -f "${TEST_DIR}/${FILE_BASE}.test.js" ]] || \
+       [[ -f "${TEST_DIR}/${FILE_BASE}.spec.ts" ]] || \
+       [[ -f "${TEST_DIR}/${FILE_BASE}.spec.js" ]]; then
+        TEST_FOUND=true
+    fi
+fi
+
+# Decision: Allow or block
+if [ "$TEST_FOUND" = true ]; then
+    echo '{"allow": true, "reason": "Tests exist for this file"}'
+    exit 0
+else
+    # Block with helpful message
+    echo "{
+        \"allow\": false,
+        \"reason\": \"🧪 TDD VIOLATION: No tests found for ${FILE_NAME}\\n\\nWrite tests first (RED phase):\\n\\nExpected test locations:\\n  • ${FILE_DIR}/${FILE_BASE}.test.{ts,js,tsx,jsx}\\n  • ${FILE_DIR}/__tests__/${FILE_BASE}.test.{ts,js}\\n  • tests/**/${FILE_BASE}.{test,spec}.{ts,js}\\n\\nTDD Workflow:\\n  1. RED: Write failing test\\n  2. GREEN: Write minimal code to pass\\n  3. REFACTOR: Clean up implementation\\n\\n💡 Tip: Use /output-style tdd-mode for strict TDD guidance\"
+    }"
+    exit 0
+fi
