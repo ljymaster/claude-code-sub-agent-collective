@@ -1,5 +1,7 @@
 # Claude Code Sub-Agent Collective - Testing Guide
 
+Note: This guide reflects legacy v2 flows (hub-and-spoke, /van). A v3 testing guide will focus on deterministic memory + hook enforcement (TDD gate + SubagentStop) and is forthcoming.
+
 This testing guide validates all functionality described in the USER-GUIDE.md through systematic test procedures.
 
 ## 🧪 Test Environment Setup

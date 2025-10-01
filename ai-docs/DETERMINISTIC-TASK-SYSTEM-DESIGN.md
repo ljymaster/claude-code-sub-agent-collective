@@ -18,6 +18,657 @@ This document presents a revolutionary approach to AI-driven task management tha
 
 ---
 
+## CRITICAL DISTINCTION: Two Separate Systems
+
+### Memory System (The Foundation)
+
+**What it is**: Deterministic file-based storage layer
+**Purpose**: Guarantee consistent read/write operations across sessions
+**Implementation**: Atomic file operations using Read/Write/Edit tools + bash
+
+**Core guarantees:**
+1. **Atomic writes** - Write succeeds completely or fails completely (no partial writes)
+2. **Verified operations** - Every operation is verified before proceeding
+3. **Consistent state** - Same operation = same result, every time
+4. **Recovery** - Failed operations leave system in known state
+
+**NOT task-specific** - This is general-purpose deterministic storage that ANY system can use.
+
+### Task System (Built On Memory)
+
+**What it is**: Task management system that USES the memory system
+**Purpose**: Manage task dependencies, validation, and execution
+**Implementation**: Hooks + Memory System + Extended Thinking
+
+**Dependencies:**
+```
+Task System
+    ↓
+Memory System (deterministic storage)
+    ↓
+File System
+```
+
+**Key point**: Task system validation rules (test pass, deliverables exist) are SEPARATE from memory system guarantees (writes are atomic and verified).
+
+**YOU CANNOT HAVE A DETERMINISTIC TASK SYSTEM WITHOUT A DETERMINISTIC MEMORY SYSTEM FIRST.**
+
+---
+
+## Concrete Example: Login Form Project
+
+**This example proves the distinction between memory and task systems.**
+
+### MEMORY SYSTEM (The Foundation)
+
+**What memory stores**: Just files in `.claude/memory/`. That's it.
+
+**Files that would exist (file-per-entity pattern):**
+```
+.claude/memory/
+├── tasks/
+│   ├── 1.json          # Task 1 data only
+│   ├── 2.json          # Task 2 data only
+│   ├── 3.json          # Task 3 data only
+│   └── 4.json          # Task 4 data only
+├── task-index.json     # Lightweight index (IDs, status, dependencies)
+└── project.json        # Project metadata
+```
+
+**Why file-per-task:**
+- ✅ **Scalable**: Read task 47 without reading tasks 1-46
+- ✅ **Fast**: Update one task = write one small file
+- ✅ **Concurrent**: Two agents can update different tasks simultaneously
+- ✅ **Atomic**: Updating task 1 cannot corrupt task 2
+- ✅ **Git-friendly**: Diff shows exactly which task changed
+
+**Memory operations used:**
+```bash
+# Write project file
+memory_write ".claude/memory/project.json" '{"name": "login-form", "created": "2025-10-01"}'
+
+# Read one task
+task=$(memory_read ".claude/memory/tasks/1.json")
+
+# Update one task status
+memory_update_json ".claude/memory/tasks/1.json" '.status = "done"'
+
+# Update index (coordination data)
+memory_update_json ".claude/memory/task-index.json" \
+  '.tasks[] |= if .id == "1" then .status = "done" else . end'
+```
+
+**Memory system doesn't care what's IN the files. It just guarantees:**
+- ✅ Writes are atomic
+- ✅ Reads are verified
+- ✅ Updates don't corrupt
+- ✅ One entity per file (scalable)
+
+### TASK SYSTEM (Uses Memory)
+
+**What tasks are**: Work Breakdown Structure (WBS) with hierarchy
+
+**WBS Structure for this project (3 levels):**
+
+```
+1.0 Authentication System (EPIC)
+  ├─ 1.1 Infrastructure (FEATURE)
+  │    ├─ 1.1.1 Setup Vite (TASK)
+  │    ├─ 1.1.2 Setup TypeScript (TASK)
+  │    └─ 1.1.3 Setup Testing (TASK)
+  ├─ 1.2 Login Form (FEATURE)
+  │    ├─ 1.2.1 HTML Structure (TASK)
+  │    ├─ 1.2.2 Form Validation (TASK)
+  │    └─ 1.2.3 Styling (TASK)
+  └─ 1.3 Integration (FEATURE)
+       └─ 1.3.1 Browser Testing (TASK)
+```
+
+**Files stored:**
+- Epic: `.claude/memory/tasks/1.json`
+- Features: `.claude/memory/tasks/1.1.json`, `1.2.json`, `1.3.json`
+- Tasks: `.claude/memory/tasks/1.1.1.json`, `1.1.2.json`, `1.1.3.json`, `1.2.1.json`, etc.
+
+**Key properties:**
+- **Epic 1**: High-level goal, has 3 features as children
+- **Feature 1.1**: Infrastructure setup, has 3 atomic tasks
+- **Task 1.1.1**: Atomic work item (leaf node), no children
+- **Dependencies**: Feature 1.2 depends on Feature 1.1 completing
+- **Roll-up status**: Feature 1.1 status = calculated from children (1.1.1, 1.1.2, 1.1.3)
+
+### How They Work Together
+
+**The task-index.json File** (Lightweight coordination data):
+
+```json
+{
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "1",
+      "type": "epic",
+      "status": "in-progress",
+      "parent": null,
+      "children": ["1.1", "1.2", "1.3"],
+      "dependencies": [],
+      "progress": {"completed": 3, "total": 7}
+    },
+    {
+      "id": "1.1",
+      "type": "feature",
+      "status": "done",
+      "parent": "1",
+      "children": ["1.1.1", "1.1.2", "1.1.3"],
+      "dependencies": [],
+      "progress": {"completed": 3, "total": 3}
+    },
+    {
+      "id": "1.1.1",
+      "type": "task",
+      "status": "done",
+      "parent": "1.1",
+      "children": [],
+      "dependencies": []
+    },
+    {
+      "id": "1.2",
+      "type": "feature",
+      "status": "in-progress",
+      "parent": "1",
+      "children": ["1.2.1", "1.2.2", "1.2.3"],
+      "dependencies": ["1.1"]
+    },
+    {
+      "id": "1.2.1",
+      "type": "task",
+      "status": "done",
+      "parent": "1.2",
+      "children": [],
+      "dependencies": []
+    },
+    {
+      "id": "1.2.2",
+      "type": "task",
+      "status": "in-progress",
+      "parent": "1.2",
+      "children": [],
+      "dependencies": []
+    }
+  ]
+}
+```
+
+**Small, fast to read, includes hierarchy and status for coordination.**
+
+---
+
+**Individual Task File** (.claude/memory/tasks/1.json):
+
+```json
+{
+  "id": "1",
+  "title": "Setup Infrastructure",
+  "description": "Initialize build tools, TypeScript config, testing framework",
+  "status": "done",
+  "phase": "infrastructure",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Vite configured with React",
+    "TypeScript compilation works",
+    "Vitest test runner setup",
+    "npm run build succeeds",
+    "npm test succeeds"
+  ],
+  "deliverables": [
+    "package.json",
+    "vite.config.ts",
+    "tsconfig.json",
+    "vitest.config.ts"
+  ],
+  "tests": [
+    "npm run build",
+    "npm test"
+  ],
+  "agent": "infrastructure-implementation-agent",
+  "startedAt": "2025-10-01T10:05:00Z",
+  "completedAt": "2025-10-01T10:30:00Z",
+  "validationResults": {
+    "testsPass": true,
+    "deliverablesExist": true,
+    "validatedAt": "2025-10-01T11:30:00Z"
+  }
+}
+```
+
+**Full data for one task. Only read when needed.**
+
+---
+
+**Why This Scales:**
+- **Query task 47**: `memory_read ".claude/memory/tasks/47.json"` (one small file)
+- **Update task 47**: `memory_update_json ".claude/memory/tasks/47.json" '.status = "done"'` (one write)
+- **Find next task**: Read index (small), filter, then read matching task file
+- **1000 tasks**: No problem - each task is independent file
+
+**This design lives in memory system, but the CONTENT is task system data.**
+
+### Concrete Workflow
+
+**1. User Creates Project:**
+```bash
+/van:new-project login-form
+
+# Hub Claude uses MEMORY SYSTEM:
+mkdir -p ".claude/memory/tasks"
+memory_write ".claude/memory/task-index.json" '{"version": "1.0.0", "tasks": []}'
+memory_write ".claude/memory/project.json" '{"name": "login-form"}'
+```
+
+**2. User Generates Tasks:**
+```bash
+/van:generate-tasks
+
+# Hub Claude (LLM) decides WHAT tasks (non-deterministic):
+# - Analyzes spec with extended thinking
+# - Creates WBS hierarchy: 1 Epic → 3 Features → 7 Tasks
+
+# Hub Claude TRIGGERS deterministic operations:
+
+# Write Epic
+memory_write ".claude/memory/tasks/1.json" \
+  '{"id": "1", "type": "epic", "title": "Authentication System", "parent": null, "children": ["1.1","1.2","1.3"]}'
+
+# Write Feature 1.1
+memory_write ".claude/memory/tasks/1.1.json" \
+  '{"id": "1.1", "type": "feature", "title": "Infrastructure", "parent": "1", "children": ["1.1.1","1.1.2","1.1.3"]}'
+
+# Write Tasks under Feature 1.1
+memory_write ".claude/memory/tasks/1.1.1.json" \
+  '{"id": "1.1.1", "type": "task", "title": "Setup Vite", "parent": "1.1", "children": [], "dependencies": []}'
+memory_write ".claude/memory/tasks/1.1.2.json" \
+  '{"id": "1.1.2", "type": "task", "title": "Setup TypeScript", "parent": "1.1", "children": [], "dependencies": []}'
+
+# [etc for all tasks...]
+
+# Update index (DETERMINISTIC)
+memory_update_json ".claude/memory/task-index.json" '.tasks += [
+  {"id": "1", "type": "epic", "status": "pending", "parent": null, "children": ["1.1","1.2","1.3"]},
+  {"id": "1.1", "type": "feature", "status": "pending", "parent": "1", "children": ["1.1.1","1.1.2","1.1.3"]},
+  {"id": "1.1.1", "type": "task", "status": "pending", "parent": "1.1", "children": []}
+]'
+```
+
+**3. Agent Completes Task 1.1.1:**
+```bash
+# Agent works on task 1.1.1 (Setup Vite)...
+# SubagentStop hook (DETERMINISTIC) validates:
+
+# 1. DETERMINISTIC: Validate tests
+npm test || exit 2
+
+# 2. DETERMINISTIC: Validate deliverables
+[ -f "vite.config.ts" ] || exit 2
+
+# 3. DETERMINISTIC: Update task file
+memory_update_json ".claude/memory/tasks/1.1.1.json" \
+  '.status = "done" | .completedAt = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"'
+
+# 4. DETERMINISTIC: Update index
+memory_update_json ".claude/memory/task-index.json" \
+  '.tasks[] |= if .id == "1.1.1" then .status = "done" else . end'
+
+# 5. DETERMINISTIC: Propagate status up hierarchy
+source .claude/memory/lib/wbs-helpers.sh
+propagate_status_up "1.1.1"
+
+# This calculates:
+# - Feature 1.1: 1/3 tasks done → status = "in-progress"
+# - Epic 1: 1/7 tasks done → status = "in-progress"
+
+# If ANY operation fails → Hook exits 2 → BLOCKED
+exit 0  # Allow Hub to proceed
+```
+
+**Hook ensures deterministic roll-up:**
+- Same task completion → Same status propagation
+- Feature status auto-calculated from children
+- Epic status auto-calculated from features
+- No manual status management by LLM
+
+**4. Hub Finds Next Task:**
+```bash
+/van:next
+
+# Hub uses MEMORY SYSTEM + helper scripts (DETERMINISTIC):
+
+# Get leaf tasks only (no children = atomic work)
+source .claude/memory/lib/wbs-helpers.sh
+leaf_tasks=$(get_leaf_tasks)
+
+# Find available tasks (leaf + dependencies satisfied + status pending)
+index=$(memory_read ".claude/memory/task-index.json")
+next_id=$(jq -r '.tasks[] |
+  select(.children == [] or .children == null) |
+  select(.status == "pending") |
+  select(
+    .dependencies == [] or
+    (.dependencies | all(. as $d | any(.tasks[]; .id == $d and .status == "done")))
+  ) | .id' <<< "$index" | head -1)
+
+# Found: 1.1.2 (Setup TypeScript)
+# Read full task data
+task=$(memory_read ".claude/memory/tasks/1.1.2.json")
+
+# Hub Claude (LLM) decides: "Deploy agent for task 1.1.2"
+# Hub TRIGGERS (deterministic): Task(prompt="Work on 1.1.2: Setup TypeScript")
+```
+
+**Hub's role:**
+- Reads deterministic state (index)
+- Uses deterministic queries (leaf tasks, dependencies)
+- Makes intelligence decision (which agent to use)
+- Triggers deterministic operation (Task tool)
+
+### The Key Distinction
+
+**Memory System** = The library functions (write/read/update)
+```bash
+memory_write()        # Low-level: "Store this content in this file atomically"
+memory_read()         # Low-level: "Give me contents of this file"
+memory_update_json()  # Low-level: "Transform this JSON atomically"
+```
+
+**Task System** = The business logic (what tasks mean, dependencies, validation)
+```bash
+# High-level: "Mark task 1 as done if tests pass"
+if npm test; then
+  memory_update_json ".claude/memory/tasks/1.json" '.status = "done"'
+  memory_update_json ".claude/memory/task-index.json" \
+    '.tasks[] |= if .id == "1" then .status = "done" else . end'
+fi
+
+# High-level: "Find next available task"
+index=$(memory_read ".claude/memory/task-index.json")
+next_id=$(jq -r '.tasks[] | select(.status=="pending") | .id' <<< "$index" | head -1)
+task=$(memory_read ".claude/memory/tasks/${next_id}.json")
+```
+
+**Task system uses memory system. Memory system doesn't know about tasks.**
+
+---
+
+### How Hooks Enforce WBS Integrity
+
+**Hooks are CRITICAL for deterministic WBS management.**
+
+#### SubagentStop Hook (Complete Implementation)
+
+```bash
+#!/bin/bash
+# .claude/hooks/subagent-validation.sh
+# DETERMINISTIC validation + WBS status propagation
+
+set -euo pipefail
+
+TASKS_INDEX=".claude/memory/task-index.json"
+source .claude/memory/lib/wbs-helpers.sh
+
+# Get current task (in-progress)
+TASK_ID=$(jq -r '.tasks[] | select(.status=="in-progress") | .id' "$TASKS_INDEX" | head -n1)
+
+if [ -z "$TASK_ID" ]; then
+  echo "No task in progress" >&2
+  exit 0
+fi
+
+echo "🔍 Validating task $TASK_ID..."
+
+# 1. DETERMINISTIC: Run tests
+if npm test > /tmp/test-output.log 2>&1; then
+  echo "✅ Tests passed"
+  TESTS_PASS=true
+else
+  echo "❌ Tests failed"
+  TESTS_PASS=false
+fi
+
+# 2. DETERMINISTIC: Check deliverables
+DELIVERABLES=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .deliverables[]" "$TASKS_INDEX" 2>/dev/null || echo "")
+DELIVERABLES_EXIST=true
+
+for file in $DELIVERABLES; do
+  if [ ! -f "$file" ]; then
+    echo "❌ Missing: $file"
+    DELIVERABLES_EXIST=false
+  fi
+done
+
+# 3. DETERMINISTIC: Update task file
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+if [ "$TESTS_PASS" = true ] && [ "$DELIVERABLES_EXIST" = true ]; then
+  # Update task
+  memory_update_json ".claude/memory/tasks/${TASK_ID}.json" \
+    ".status = \"done\" | .completedAt = \"$TIMESTAMP\""
+
+  # Update index
+  memory_update_json "$TASKS_INDEX" \
+    ".tasks[] |= if .id == \"$TASK_ID\" then .status = \"done\" else . end"
+
+  # 4. DETERMINISTIC: Propagate status up hierarchy
+  propagate_status_up "$TASK_ID"
+
+  # Success
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SubagentStop",
+    "permissionDecision": "allow",
+    "permissionDecisionReason": "Task $TASK_ID validated ✅ (tests pass, deliverables exist, status propagated)"
+  }
+}
+EOF
+  exit 0
+else
+  # Failure - BLOCK
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SubagentStop",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Task $TASK_ID validation failed: tests=$TESTS_PASS, deliverables=$DELIVERABLES_EXIST"
+  }
+}
+EOF
+  exit 2
+fi
+```
+
+**What this enforces:**
+1. ✅ **Tests must pass** - No silent failures
+2. ✅ **Deliverables must exist** - No claiming work is done without proof
+3. ✅ **Status updates atomic** - Task file + index updated together
+4. ✅ **Hierarchy roll-up automatic** - Parent status calculated from children
+5. ✅ **No LLM involvement** - Pure deterministic logic
+
+#### PreToolUse Hook (Dependency Enforcement)
+
+```bash
+#!/bin/bash
+# .claude/hooks/pre-agent-deploy.sh
+# DETERMINISTIC dependency checking
+
+set -euo pipefail
+
+TASKS_INDEX=".claude/memory/task-index.json"
+
+# Parse tool input
+TOOL_INPUT=$(cat)
+TOOL_NAME=$(echo "$TOOL_INPUT" | jq -r '.tool_name')
+
+# Only validate Task tool
+if [ "$TOOL_NAME" != "Task" ]; then
+  exit 0
+fi
+
+# Extract task ID from prompt
+PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty')
+TASK_ID=$(echo "$PROMPT" | grep -oP 'task \K[0-9.]+' | head -n1)
+
+if [ -z "$TASK_ID" ]; then
+  exit 0  # No task ID, allow
+fi
+
+echo "🔍 Checking dependencies for task $TASK_ID..."
+
+# 1. Check task is leaf (no children)
+CHILDREN=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .children[]" "$TASKS_INDEX" 2>/dev/null || echo "")
+
+if [ -n "$CHILDREN" ]; then
+  # Task has children - cannot work on parent tasks
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Cannot work on $TASK_ID - has children. Work on leaf tasks only."
+  }
+}
+EOF
+  exit 2
+fi
+
+# 2. Check dependencies satisfied
+DEPS=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .dependencies[]" "$TASKS_INDEX" 2>/dev/null || echo "")
+
+ALL_DONE=true
+for dep in $DEPS; do
+  dep_status=$(jq -r ".tasks[] | select(.id==\"$dep\") | .status" "$TASKS_INDEX")
+
+  if [ "$dep_status" != "done" ]; then
+    echo "❌ Dependency $dep not done (status: $dep_status)"
+    ALL_DONE=false
+  fi
+done
+
+if [ "$ALL_DONE" = true ]; then
+  echo "✅ All dependencies satisfied"
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "allow",
+    "permissionDecisionReason": "Task $TASK_ID ready (leaf task, dependencies satisfied)"
+  }
+}
+EOF
+  exit 0
+else
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Task $TASK_ID blocked - dependencies not satisfied"
+  }
+}
+EOF
+  exit 2
+fi
+```
+
+**What this enforces:**
+1. ✅ **Leaf tasks only** - Cannot work on Epics/Features with children
+2. ✅ **Dependencies satisfied** - Cannot start task until prerequisites done
+3. ✅ **Cross-level dependencies** - Feature can depend on Feature
+4. ✅ **BLOCKS deployment** - PreToolUse prevents Task tool from running
+
+---
+
+### Why This is Deterministic
+
+**LLM (Non-Deterministic):**
+- Decides which tasks to create
+- Decides which agent to deploy
+- Extended thinking about dependencies
+
+**Hooks + Scripts (Deterministic):**
+- Validate tests pass (same test → same result)
+- Check files exist (same filesystem → same result)
+- Calculate roll-up status (same children → same parent status)
+- Block if validation fails (same failure → always blocks)
+
+**Result:**
+```
+Same task completion + Same validation + Same dependencies
+    = Same system state
+    = DETERMINISTIC
+```
+
+---
+
+### What Would Break This
+
+**If Memory System Was Non-Deterministic:**
+```bash
+# Agent completes task
+memory_update_json ".claude/memory/tasks/1.json" '.status = "done"'
+# ❌ Function fails silently, file not updated
+
+# Hub reads state
+task=$(memory_read ".claude/memory/tasks/1.json")
+# Task 1 still shows "in-progress" (inconsistent state)
+
+# Hub thinks: "Task 1 not done, can't start Task 2"
+# SYSTEM STUCK
+```
+
+**With Deterministic Memory System:**
+```bash
+# Agent completes task
+memory_update_json ".claude/memory/tasks/1.json" '.status = "done"'
+# ✅ Succeeds completely OR fails with error (no silent failures)
+
+# If it succeeds:
+task=$(memory_read ".claude/memory/tasks/1.json")
+# Task 1 shows "done" (guaranteed)
+
+# Hub: "Task 1 done, deploy Task 2"
+# SYSTEM PROCEEDS
+```
+
+**Scalability Comparison:**
+
+**Non-Scalable (Single File):**
+```bash
+# Read ALL tasks to find one
+memory_read ".claude/memory/tasks.json"  # 2000 lines for 100 tasks
+jq '.tasks[] | select(.id=="47")'
+
+# Update one task = rewrite entire file
+memory_update_json ".claude/memory/tasks.json" \
+  '.tasks[46].status = "done"'  # Rewrites all 100 tasks
+```
+
+**Scalable (File-Per-Task):**
+```bash
+# Read ONE task
+memory_read ".claude/memory/tasks/47.json"  # 20 lines
+
+# Update one task = write one file
+memory_update_json ".claude/memory/tasks/47.json" \
+  '.status = "done"'  # Writes only task 47
+```
+
+### Summary
+
+**Memory System** = File operations that are atomic and verified (the HOW)
+**Task System** = Concept of tasks with dependencies that stores data using memory system (the WHAT)
+
+**Memory is the storage mechanism. Tasks are the data being stored.**
+
+---
+
 ## Part 1: Analysis of Existing Systems
 
 ### CCPM (Claude Code PM) - GitHub-Based PM

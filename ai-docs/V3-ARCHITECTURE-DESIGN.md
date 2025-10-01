@@ -91,18 +91,14 @@ Hub Claude (extended thinking):
 - Independent context preserves focus
 
 ### Memory Tool (Native Claude 4.5 Feature)
-**What**: Create/read/update/delete files in dedicated memory directory
+**What**: Create/read/update/delete files in a dedicated memory directory (Claude API feature)
 **Persistence**: Across conversation sessions
 **Storage**: Developer-managed infrastructure
-**Operations**:
-- `create_memory(path, content)` - Create new file
-- `read_memory(path)` - Read existing file
-- `update_memory(path, content)` - Update file contents
-- `delete_memory(path)` - Remove file
+**Operations** (API): `view`, `create`, `insert`, `str_replace`, `delete`, `rename`
 
 **Use Case**: Persistent state management, task tracking, validation results
 
-**STATUS**: ⚠️ Verify availability in Claude Code CLI (documented for API use)
+**STATUS**: Not available in Claude Code CLI. In Claude Code, we implement a file-based memory under `.claude/memory/` with bash+jq using atomic operations.
 
 ### Enhanced Context & Reasoning
 - 200k context window (1M in beta)
@@ -265,9 +261,7 @@ fi
 
 ### Open Design Questions
 
-1. **Memory Tool Availability**: Is `create_memory/read_memory/update_memory/delete_memory` available in Claude Code CLI?
-   - If YES: Use native tool
-   - If NO: Implement with Write/Read to `.claude/memory/` directory
+1. **Memory Tool Availability**: RESOLVED. Native memory tool is API-only; Claude Code uses `.claude/memory/` with deterministic bash+jq operations.
 
 2. **Concurrent Access**: How to handle parallel agents updating memory simultaneously?
    - File locking mechanism?
@@ -283,10 +277,7 @@ fi
    - Migration scripts?
    - Backward compatibility?
 
-5. **Hook-Memory Interface**: How do bash scripts invoke memory operations?
-   - Via Claude Code CLI commands?
-   - Direct file writes to .claude/memory/?
-   - API calls to MCP server?
+5. **Hook-Memory Interface**: Hooks source `.claude/memory/lib/memory.sh` and operate on `.claude/memory/*` using atomic temp-file + mv patterns. No external API required.
 
 6. **Performance**: Memory file sizes, read/write frequency optimization
    - Incremental updates vs full rewrites?
