@@ -21,11 +21,100 @@ This is the **Claude Code Sub-Agent Collective** - an NPX-distributed framework 
 
 ### Key Components
 - **NPX Package**: `claude-code-collective` - Installable via `npx claude-code-collective init`
-- **Agent System**: 30+ specialized agents in `templates/agents/`
+- **Agent System**: 30 specialized agents in `templates/agents/`
 - **Hook System**: TDD enforcement hooks in `templates/hooks/`
-- **Command System**: Natural language + structured commands in `lib/command-*.js`
-- **Metrics Framework**: Research hypotheses tracking in `lib/metrics/`
+- **Command System**: `/van` command activates collective framework
 - **Template System**: Installation templates in `templates/`
+
+## v3.0 Intelligent Agent Orchestration
+
+### How It Works (CRITICAL - READ THIS)
+
+**Agents are INTELLIGENT and analyze code to determine next steps. Users make simple requests, agents orchestrate the entire workflow automatically.**
+
+### Complete Workflow Example
+
+**User Request:**
+```
+/van
+
+Build a simple login form with username and password fields
+```
+
+**Automatic Agent Sequence (NO user intervention):**
+
+1. **Hub Claude** analyzes request → deploys `@component-implementation-agent` via Task tool
+
+2. **@component-implementation-agent** executes:
+   - TDD hook enforces tests-first (blocks Write until tests exist)
+   - Writes tests first (e.g., `LoginForm.test.js`)
+   - Writes implementation (e.g., `LoginForm.html`, `LoginForm.js`)
+   - Completes with: "Deploy @tdd-validation-agent for final validation"
+
+3. **Hub Claude** reads suggestion → deploys `@tdd-validation-agent` via Task tool
+
+4. **@tdd-validation-agent** executes:
+   - Runs tests to verify they pass
+   - **SCANS IMPLEMENTATION CODE** for browser functionality:
+     - Detects `<form>`, `<input>`, `<button>` elements
+     - Detects `addEventListener`, `onclick` handlers
+     - Detects DOM manipulation (`document.querySelector`, etc.)
+   - **IF UI/DOM detected**: Suggests "Deploy @chrome-devtools-testing-agent"
+   - **IF no UI/DOM**: Says "Task ready for closure"
+
+5. **Hub Claude** reads suggestion → deploys `@chrome-devtools-testing-agent` via Task tool
+
+6. **@chrome-devtools-testing-agent** executes:
+   - Opens browser to application URL
+   - **CLICKS and INTERACTS** with actual UI (no console.log needed)
+   - Fills username field using `mcp__chrome-devtools__fill`
+   - Fills password field using `mcp__chrome-devtools__fill`
+   - Clicks submit button using `mcp__chrome-devtools__click`
+   - **VERIFIES DOM STATE** using `mcp__chrome-devtools__evaluate_script`:
+     - Checks if elements appeared/disappeared
+     - Verifies text content changed
+     - Confirms CSS classes updated
+   - Takes before/after screenshots
+   - Checks network requests completed
+   - Reports: "UI interactions verified ✅"
+
+7. **Hub Claude** reports all gates passed → Complete
+
+### Key Principles (CRITICAL)
+
+**AGENTS DECIDE NEXT STEPS, NOT USERS:**
+- Users never say "add console.log" or "test in browser"
+- Agents analyze code and suggest next agent automatically
+- Hub Claude reads agent suggestions and deploys next agent
+
+**BROWSER TESTING USES ACTUAL INTERACTIONS:**
+- Chrome DevTools MCP **clicks buttons** and **fills forms**
+- Verifies DOM state changes via JavaScript evaluation
+- Takes screenshots for visual validation
+- Does NOT rely on console.log (only checks for errors)
+
+**TDD HOOKS ENFORCE TEST-FIRST:**
+- PreToolUse hook blocks Write/Edit operations
+- Implementation files cannot be written until tests exist
+- Automatic and transparent to agents
+
+### Agent Intelligence Rules
+
+**component-implementation-agent:**
+- Builds UI components with TDD
+- Suggests: "Deploy @tdd-validation-agent"
+
+**tdd-validation-agent:**
+- Validates TDD methodology
+- **Scans code for**: `<form>`, `<input>`, event handlers, DOM APIs
+- **IF UI detected**: Suggests "Deploy @chrome-devtools-testing-agent"
+- **IF no UI**: Says "Task ready for closure"
+
+**chrome-devtools-testing-agent:**
+- Tests browser functionality via actual interactions
+- Primary method: Click, fill, verify DOM changes
+- Secondary: Network requests, console errors
+- Never requires console.log to be present
 
 ## Essential Commands
 
@@ -318,5 +407,216 @@ The installation system uses a template-based architecture:
    - Reports success with installed file counts
 
 **Key Implementation Note**: When adding new files to installation, ALWAYS update lib/file-mapping.js. The file mapping is the single source of truth for what gets installed.
+
+## Testing TDD Hooks
+
+### Hook Architecture (v3.0)
+
+Claude Code Collective v3.0 uses native Claude Code PreToolUse hooks with `hookSpecificOutput` decision control. Hooks must return proper JSON format to function correctly.
+
+### Manual Hook Testing (Development Testing)
+
+When developing or debugging hooks, test them manually outside Claude Code:
+
+```bash
+# Navigate to test installation
+cd /mnt/h/Active/npm-tests/ccc-testing-v5
+
+# Test TDD gate blocks implementation without tests
+echo '{"tool_name": "Write", "tool_input": {"file_path": "src/PaymentService.js"}}' | ./.claude/hooks/tdd-gate.sh
+
+# Expected: {"hookSpecificOutput": {"permissionDecision": "deny", ...}}
+
+# Test TDD gate allows test files
+echo '{"tool_name": "Write", "tool_input": {"file_path": "src/PaymentService.test.js"}}' | ./.claude/hooks/tdd-gate.sh
+
+# Expected: {"hookSpecificOutput": {"permissionDecision": "allow", ...}}
+
+# Create test file, verify implementation now allowed
+mkdir -p src && touch src/PaymentService.test.js
+echo '{"tool_name": "Write", "tool_input": {"file_path": "src/PaymentService.js"}}' | ./.claude/hooks/tdd-gate.sh
+
+# Expected: {"hookSpecificOutput": {"permissionDecision": "allow", "permissionDecisionReason": "Tests exist for this file"}}
+
+# Test destructive command blocking
+echo '{"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}}' | ./.claude/hooks/block-destructive-commands.sh
+
+# Expected: {"hookSpecificOutput": {"permissionDecision": "deny", ...}}
+```
+
+### Live Hook Testing (User Experience Testing)
+
+To test hooks in a real Claude Code session:
+
+```bash
+# 1. Deploy package locally
+./scripts/test-local.sh
+
+# 2. Navigate to test directory (script does this automatically)
+cd /mnt/h/Active/npm-tests/ccc-testing-vN
+
+# 3. Start Claude Code
+claude-code
+
+# 4. In Claude Code session, request implementation WITHOUT tests
+> Create a file src/UserService.js with a simple user management class
+
+# Expected: Hook should BLOCK with TDD violation message:
+# "🧪 TDD VIOLATION: No tests found for UserService.js..."
+
+# 5. Request test file creation
+> Create src/UserService.test.js with tests for UserService
+
+# Expected: Hook should ALLOW (test files always allowed)
+
+# 6. Request implementation again
+> Now create src/UserService.js implementation
+
+# Expected: Hook should ALLOW (tests exist)
+```
+
+### Hook Output Format (v3.0+)
+
+All PreToolUse hooks MUST use this exact JSON format:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "allow" | "deny" | "ask",
+    "permissionDecisionReason": "Human-readable explanation"
+  }
+}
+```
+
+**DEPRECATED (v2.x)**: Old format no longer works:
+```json
+{"allow": true, "reason": "..."}  // ❌ Does not work
+```
+
+### Troubleshooting Hook Failures
+
+**Symptom**: Hooks don't block/allow as expected, operations succeed when they should be blocked.
+
+**Common Causes**:
+
+1. **Wrong JSON format** - Hooks using deprecated `{"allow": ...}` format instead of `hookSpecificOutput`
+2. **Non-executable hooks** - Run `chmod +x .claude/hooks/*.sh`
+3. **Missing settings.json configuration** - Verify `.claude/settings.json` has PreToolUse hooks configured
+4. **Hook script errors** - Test hook manually to see error messages
+
+**Debugging Steps**:
+
+```bash
+# 1. Test hook manually with verbose output
+cd /path/to/test/directory
+echo '{"tool_name": "Write", "tool_input": {"file_path": "test.js"}}' | bash -x ./.claude/hooks/tdd-gate.sh
+
+# 2. Check hook permissions
+ls -la .claude/hooks/
+# All .sh files should have execute permission (rwxr-xr-x)
+
+# 3. Verify settings.json configuration
+cat .claude/settings.json | jq '.hooks.PreToolUse'
+# Should show tdd-gate.sh configured for Edit|Write matcher
+
+# 4. Check hook output is valid JSON
+echo '{"tool_name": "Write", "tool_input": {"file_path": "test.js"}}' | ./.claude/hooks/tdd-gate.sh | jq .
+# Should parse without errors and show hookSpecificOutput structure
+```
+
+### Hook Development Workflow
+
+When modifying hooks:
+
+1. **Edit hook template** in `templates/hooks/`
+2. **Update tests** if hook behavior changes
+3. **Test manually** using echo/pipe method (see above)
+4. **Deploy locally** with `./scripts/test-local.sh`
+5. **Test in live Claude Code session** to verify user experience
+6. **Document changes** in CHANGELOG.md
+
+## Testing Complete Agent Workflow (v3.0)
+
+### Full Integration Test - Login Form Example
+
+This test validates the ENTIRE intelligent agent orchestration system:
+
+**Step 1: Deploy Package**
+```bash
+./scripts/test-local.sh
+cd /mnt/h/Active/npm-tests/ccc-testing-vN  # Script auto-navigates here
+```
+
+**Step 2: Start Claude Code Session**
+```bash
+claude-code
+```
+
+**Step 3: Make Simple Request**
+```
+/van
+
+Build a simple login form with username and password fields
+```
+
+**Expected Agent Workflow (Automatic):**
+
+```
+🚀 COLLECTIVE FRAMEWORK ACTIVATED
+
+Step 1: Deploying @component-implementation-agent
+[Agent writes tests first - TDD hook enforces this]
+[Agent writes login form implementation]
+✅ Agent suggests: "Deploy @tdd-validation-agent"
+
+Step 2: Hub deploys @tdd-validation-agent
+[Agent validates TDD methodology]
+[Agent scans code, detects <form> and event handlers]
+✅ Agent suggests: "Deploy @chrome-devtools-testing-agent - UI detected"
+
+Step 3: Hub deploys @chrome-devtools-testing-agent
+[Agent starts dev server or navigates to page]
+[Agent fills username field]
+[Agent fills password field]
+[Agent clicks submit button]
+[Agent verifies DOM state changed]
+[Agent takes before/after screenshots]
+✅ Agent reports: "UI interactions verified"
+
+🎉 ALL GATES PASSED - Complete
+```
+
+### What to Verify
+
+**TDD Hook Working:**
+- Implementation agent should create test file BEFORE implementation file
+- If you see implementation created first → hook is broken
+
+**Agent Handoffs Working:**
+- Hub should deploy tdd-validation-agent after implementation agent completes
+- Hub should deploy chrome-devtools-testing-agent after TDD validation (if UI detected)
+- If Hub implements directly → delegation broken
+
+**Browser Testing Working:**
+- Chrome DevTools agent should CLICK and FILL forms (not rely on console.log)
+- Agent should verify DOM state changes via evaluate_script
+- Agent should take screenshots
+- If agent asks for console.log → agent instructions broken
+
+### Common Issues
+
+**"Hub implements directly instead of using agents"**
+- Check `/van` command instructs "MUST delegate via Task tool"
+- Check agent descriptions are clear for routing
+
+**"Browser testing not triggered"**
+- Check tdd-validation-agent scans for DOM/UI code
+- Check agent suggests chrome-devtools-testing-agent
+
+**"TDD hook doesn't block"**
+- Check hook uses hookSpecificOutput JSON format
+- Check settings.json has PreToolUse hooks configured
+- Test hook manually: `echo '{"tool_name": "Write", "tool_input": {"file_path": "test.js"}}' | ./.claude/hooks/tdd-gate.sh`
 
 This codebase implements a sophisticated agent collective system with strong TDD enforcement and intelligent routing capabilities.

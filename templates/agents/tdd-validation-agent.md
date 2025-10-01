@@ -155,6 +155,32 @@ Use the tdd-validation-agent subagent to perform comprehensive TDD validation fo
 ## 🔄 **MANDATORY HANDOFF PROTOCOL**
 
 ### **WHEN VALIDATION PASSES:**
+
+**I MUST analyze the implemented code to determine next steps:**
+
+**Check for Browser Testing Requirements:**
+1. Scan implementation files for:
+   - DOM manipulation (`document.querySelector`, `getElementById`, `innerHTML`, etc.)
+   - Event handlers (`onClick`, `addEventListener`, `onSubmit`, etc.)
+   - UI rendering (React components, HTML files, templates, etc.)
+   - Form elements (`<form>`, `<input>`, `<button>`, etc.)
+   - Browser APIs (`localStorage`, `fetch`, `window`, `location`, etc.)
+   - User interactions (clicks, form submissions, navigation)
+
+2. **IF browser functionality detected:**
+```
+Task X validation: PASSED ✅
+All tests passing, build successful, TDD compliance verified.
+
+**Browser testing required** - Code contains UI/DOM interactions.
+Deploy @chrome-devtools-testing-agent to verify:
+- UI interactions work correctly (clicks, form submissions)
+- DOM state changes as expected
+- Network requests complete successfully
+- No JavaScript errors in console
+```
+
+3. **IF no browser functionality (pure backend/logic):**
 ```
 Task X validation: PASSED ✅
 All tests passing, build successful, TDD compliance verified.

@@ -36,6 +36,7 @@ fi
 # Only check Bash tool commands
 if [ "$TOOL_NAME" != "Bash" ]; then
     log "Skipping non-Bash tool: $TOOL_NAME"
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Not a Bash command"}}'
     exit 0
 fi
 
@@ -45,13 +46,18 @@ log "Checking command for destructive patterns: $COMMAND"
 block_command() {
     local reason="$1"
     local command="$2"
-    
-    echo "🚫 BLOCKED: $reason" >&2
-    echo "Command: $command" >&2
-    echo "Use manual approval or sandbox environment for dangerous operations" >&2
-    
+
     log "BLOCKED: $reason - Command: $command"
-    exit 2  # Claude Code convention for blocking
+
+    # Output hookSpecificOutput JSON for PreToolUse decision control
+    echo "{
+        \"hookSpecificOutput\": {
+            \"hookEventName\": \"PreToolUse\",
+            \"permissionDecision\": \"deny\",
+            \"permissionDecisionReason\": \"🚫 BLOCKED: $reason\\n\\nCommand: $command\\n\\nUse manual approval or sandbox environment for dangerous operations\"
+        }
+    }"
+    exit 0
 }
 
 # Check for filesystem destruction patterns
@@ -240,4 +246,13 @@ check_system_destruction "$COMMAND"
 
 # If we get here, command is safe to execute
 log "ALLOWED: $COMMAND"
+
+# Output hookSpecificOutput JSON for PreToolUse decision control
+echo "{
+    \"hookSpecificOutput\": {
+        \"hookEventName\": \"PreToolUse\",
+        \"permissionDecision\": \"allow\",
+        \"permissionDecisionReason\": \"Command passed all safety checks\"
+    }
+}"
 exit 0

@@ -8,31 +8,31 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // 
 
 # Only gate Edit/Write operations
 if [[ "$TOOL_NAME" != "Edit" && "$TOOL_NAME" != "Write" ]]; then
-    echo '{"allow": true}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Not an Edit/Write operation"}}'
     exit 0
 fi
 
 # If no file path, allow (might be other operation)
 if [[ -z "$FILE_PATH" || "$FILE_PATH" == "null" ]]; then
-    echo '{"allow": true}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "No file path specified"}}'
     exit 0
 fi
 
 # Check if this is a test file (allow test creation)
 if [[ "$FILE_PATH" =~ \.test\.|\.spec\.|__tests__|\.test/|\.spec/|/tests/ ]]; then
-    echo '{"allow": true, "reason": "Test file modification allowed"}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Test file modification allowed"}}'
     exit 0
 fi
 
 # Check if this is a documentation file (allow docs)
 if [[ "$FILE_PATH" =~ \.md$|\.txt$|/docs/|CLAUDE\.md|README ]]; then
-    echo '{"allow": true, "reason": "Documentation file allowed"}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Documentation file allowed"}}'
     exit 0
 fi
 
 # Check if this is a configuration file (allow configs)
 if [[ "$FILE_PATH" =~ package\.json|tsconfig\.json|\.config\.|\.rc$|\.yaml$|\.yml$ ]]; then
-    echo '{"allow": true, "reason": "Configuration file allowed"}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Configuration file allowed"}}'
     exit 0
 fi
 
@@ -87,13 +87,16 @@ fi
 
 # Decision: Allow or block
 if [ "$TEST_FOUND" = true ]; then
-    echo '{"allow": true, "reason": "Tests exist for this file"}'
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Tests exist for this file"}}'
     exit 0
 else
     # Block with helpful message
     echo "{
-        \"allow\": false,
-        \"reason\": \"🧪 TDD VIOLATION: No tests found for ${FILE_NAME}\\n\\nWrite tests first (RED phase):\\n\\nExpected test locations:\\n  • ${FILE_DIR}/${FILE_BASE}.test.{ts,js,tsx,jsx}\\n  • ${FILE_DIR}/__tests__/${FILE_BASE}.test.{ts,js}\\n  • tests/**/${FILE_BASE}.{test,spec}.{ts,js}\\n\\nTDD Workflow:\\n  1. RED: Write failing test\\n  2. GREEN: Write minimal code to pass\\n  3. REFACTOR: Clean up implementation\\n\\n💡 Tip: Use /output-style tdd-mode for strict TDD guidance\"
+        \"hookSpecificOutput\": {
+            \"hookEventName\": \"PreToolUse\",
+            \"permissionDecision\": \"deny\",
+            \"permissionDecisionReason\": \"🧪 TDD VIOLATION: No tests found for ${FILE_NAME}\\n\\nWrite tests first (RED phase):\\n\\nExpected test locations:\\n  • ${FILE_DIR}/${FILE_BASE}.test.{ts,js,tsx,jsx}\\n  • ${FILE_DIR}/__tests__/${FILE_BASE}.test.{ts,js}\\n  • tests/**/${FILE_BASE}.{test,spec}.{ts,js}\\n\\nTDD Workflow:\\n  1. RED: Write failing test\\n  2. GREEN: Write minimal code to pass\\n  3. REFACTOR: Clean up implementation\\n\\n💡 Tip: Use /output-style tdd-mode for strict TDD guidance\"
+        }
     }"
     exit 0
 fi
