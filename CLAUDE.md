@@ -536,6 +536,104 @@ When modifying hooks:
 5. **Test in live Claude Code session** to verify user experience
 6. **Document changes** in CHANGELOG.md
 
+## Testing Deterministic Logging System (v3.0)
+
+### Logging System Overview
+
+The deterministic logging system captures complete audit trails of all hook decisions and memory operations. This is critical for research, debugging, and understanding workflow behavior.
+
+### Testing Logging End-to-End
+
+**Step 1: Deploy Package**
+```bash
+./scripts/test-local.sh
+cd /mnt/h/Active/npm-tests/ccc-testing-vN
+```
+
+**Step 2: Start Claude Code Session**
+```bash
+claude-code
+```
+
+**Step 3: Enable Logging**
+```
+/van logging enable
+```
+
+Expected output:
+```
+✅ Toggle file created: .claude/memory/.logging-enabled
+📊 Logging System ENABLED
+...
+```
+
+**Step 4: Verify Toggle File Created**
+```bash
+test -f .claude/memory/.logging-enabled && echo "✅ Toggle exists" || echo "❌ Missing"
+```
+
+**Step 5: Run Workflow**
+```
+/van "build me a simple todo application"
+```
+
+**Step 6: Check Logs Populated**
+```bash
+# Count events
+wc -l .claude/memory/logs/current/hooks.jsonl
+wc -l .claude/memory/logs/current/memory.jsonl
+
+# Should show non-zero line counts (e.g., 37 and 36)
+```
+
+**Step 7: Inspect Log Content**
+```bash
+# View hook decisions
+head -5 .claude/memory/logs/current/hooks.jsonl
+
+# Count hook types
+grep -o '"hook":"[^"]*"' .claude/memory/logs/current/hooks.jsonl | sort | uniq -c
+
+# View memory rollups
+grep '"type":"rollup"' .claude/memory/logs/current/memory.jsonl | head -5
+```
+
+**Step 8: Test Disable**
+```
+/van logging disable
+```
+
+Expected: Toggle file removed, logs preserved.
+
+### What Should Be Logged
+
+**Hook Events (hooks.jsonl)**:
+- PreToolUse decisions for Task, Write, Edit operations
+- SubagentStop validations (tests + deliverables)
+- TDD gate enforcement decisions
+- Decision reasons and validation checks
+
+**Memory Operations (memory.jsonl)**:
+- Task status updates (pending → in-progress → done)
+- WBS rollups (status propagation through hierarchy)
+- File paths and operation types
+
+### Common Issues
+
+**Empty log files despite workflow completing**:
+- Check toggle file exists: `test -f .claude/memory/.logging-enabled`
+- If missing: `/van logging enable` wasn't run correctly
+- Solution: Logging scripts guarantee toggle file creation
+
+**Logs not updating**:
+- Verify hooks have executable permissions: `ls -la .claude/hooks/*.sh`
+- Check hooks source logging.sh library
+- Verify hooks call log_hook_event() before decisions
+
+**Malformed JSON in logs**:
+- Check hook scripts properly escape reason strings
+- Verify jq can parse: `jq . .claude/memory/logs/current/hooks.jsonl`
+
 ## Testing Complete Agent Workflow (v3.0)
 
 ### Full Integration Test - Login Form Example

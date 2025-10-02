@@ -6,6 +6,67 @@
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskmaster/CLAUDE.md
 
+## Deterministic Logging System
+
+The collective includes a deterministic logging system that captures complete audit trails of hook decisions and memory operations during `/van` workflow execution.
+
+### How to Use Logging
+
+**Enable logging:**
+```
+/van logging enable
+```
+
+This creates the toggle file `.claude/memory/.logging-enabled` and initializes log directories. Once enabled, all hooks automatically log their decisions.
+
+**Check logging status:**
+```
+/van logging status
+```
+
+Shows whether logging is enabled and displays recent hook/memory events.
+
+**Disable logging:**
+```
+/van logging disable
+```
+
+Removes the toggle file (stops logging) but preserves existing logs.
+
+### What Gets Logged
+
+When enabled, the system captures:
+- **Hook decisions** (hooks.jsonl) - PreToolUse and SubagentStop decisions with reasoning
+- **Memory operations** (memory.jsonl) - Task status updates and WBS rollups
+
+Logs are in JSONL format (one JSON object per line) in `.claude/memory/logs/current/`.
+
+### Viewing Logs
+
+```bash
+# Count events
+wc -l .claude/memory/logs/current/hooks.jsonl
+wc -l .claude/memory/logs/current/memory.jsonl
+
+# View hook decisions
+jq '.hook + " | " + .decision + " | " + .reason' .claude/memory/logs/current/hooks.jsonl
+
+# View memory operations
+jq 'select(.type=="memory") | .op + " | " + .file' .claude/memory/logs/current/memory.jsonl
+
+# View WBS rollups
+jq 'select(.type=="rollup") | "Task " + .taskId + " → " + .newStatus' .claude/memory/logs/current/memory.jsonl
+```
+
+### Why Logging is Useful
+
+- **Debugging** - Understand why workflows succeeded or failed
+- **Research** - Analyze agent behavior and hook decisions
+- **Audit trails** - Complete record of all workflow activities
+- **Deterministic behavior** - Scripts guarantee toggle file creation (not instruction-based)
+
+Logging is opt-in and has zero performance impact when disabled.
+
 ## Testing TDD Hooks
 
 The Claude Code Collective uses PreToolUse hooks to enforce TDD workflow. To test that hooks are working correctly:

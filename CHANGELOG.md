@@ -5,6 +5,124 @@ All notable changes to the TaskMaster Agent autonomous development system will b
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-10-02
+
+### 🎉 Major Release - Deterministic Logging System
+
+This release introduces a **fully deterministic logging system** that captures complete audit trails of all hook decisions and memory operations during `/van` workflow execution.
+
+### 🔧 Critical Fix - Logging System
+
+**Problem**: Logging system was not capturing events because toggle file was never created. Hub Claude was given instructions but didn't reliably execute them, resulting in empty log files despite workflows completing successfully.
+
+**Solution**: Replaced instruction-based approach with deterministic shell scripts that Hub Claude must execute. Scripts guarantee toggle file creation/removal with built-in verification.
+
+### ✨ New Features
+
+#### Deterministic Logging Scripts
+- **`logging-enable.sh`** - Enables logging system
+  - Creates `.claude/memory/.logging-enabled` toggle file (GUARANTEED)
+  - Creates log directory structure
+  - Initializes log files
+  - Verifies toggle file creation (exits with error if fails)
+
+- **`logging-disable.sh`** - Disables logging system
+  - Removes `.logging-enabled` toggle file (GUARANTEED)
+  - Verifies toggle file removal
+  - Preserves existing logs for analysis
+
+- **`logging-status.sh`** - Shows logging status
+  - Checks toggle file existence deterministically
+  - Shows recent hook events (last 5)
+  - Shows recent memory operations (last 5)
+  - Provides jq query commands for log analysis
+
+#### Updated Commands
+- **`/van logging enable`** - Now executes `logging-enable.sh` script (not instructions)
+- **`/van logging disable`** - Now executes `logging-disable.sh` script
+- **`/van logging status`** - Now executes `logging-status.sh` script
+
+### 🔄 Improved Features
+
+#### WBS + TDD Integration
+- **Task structure enforces TDD**: Test task created before implementation task with dependencies
+- **Example workflow**:
+  ```
+  1.1.1 Write tests (no dependencies) → test-first-agent
+  1.1.2 Implement code (depends on 1.1.1) → implementation-agent
+  ```
+- **Belt and suspenders**: Task dependencies + TDD hook enforcement
+
+#### Hook Logging Coverage
+- **All hooks now log regardless of state**:
+  - `pre-agent-deploy.sh` - Logs even when no task-index.json exists
+  - `subagent-validation.sh` - Logs even when no task ID found
+  - `tdd-gate.sh` - Added complete logging (was missing entirely)
+- **Logged decisions include**: allow/deny/block, reason, validation checks
+
+#### Complete Audit Trail
+When logging is enabled, system captures:
+- **Hook Events** (hooks.jsonl):
+  - PreToolUse decisions (Task, Write, Edit operations)
+  - SubagentStop validations (tests + deliverables)
+  - TDD gate enforcement decisions
+
+- **Memory Operations** (memory.jsonl):
+  - Task status updates (pending → in-progress → done)
+  - WBS hierarchy rollups (automatic status propagation)
+  - File-based atomic operations
+
+### 📊 Validation Results
+
+**Test workflow logged 73 events**:
+- 37 hook decisions (31 PreToolUse + 6 SubagentStop)
+- 36 memory operations (24 updates + 12 rollups)
+- 6 tasks validated end-to-end
+- Complete TDD workflow captured
+
+### 🛠️ Technical Changes
+
+#### File Mapping
+- Added 3 new scripts to `lib/file-mapping.js`:
+  - `logging-enable.sh` (required: true, overwrite: true)
+  - `logging-disable.sh` (required: true, overwrite: true)
+  - `logging-status.sh` (required: true, overwrite: true)
+- Total installed files increased from 118 to 121
+
+#### Command Documentation
+- **van-logging.md**: Changed from instruction-based to script-execution approach
+- **van.md**: Removed misleading "Logged to hooks.jsonl" messages from examples
+- Added logging system explanation at top of van.md
+- Clarified Hub Claude doesn't log (hooks log automatically)
+
+### 🎯 Why This Approach Works
+
+**Key principle**: "Never rely on Hub Claude to follow instructions - use deterministic scripts"
+
+- **Scripts are verifiable**: They check their own work and exit with errors if they fail
+- **No instruction ambiguity**: Hub Claude just runs a script, script guarantees outcome
+- **Follows project principles**: Same approach as hooks (deterministic file operations)
+- **Audit trail integrity**: Toggle file creation is guaranteed, not hoped for
+
+### 📝 Breaking Changes
+
+None - this is a pure addition. Projects without logging enabled continue to work exactly as before.
+
+### 🔜 Migration Guide
+
+For users of previous versions:
+1. Update package: `npm install claude-code-collective@3.0.0`
+2. Reinstall: `npx claude-code-collective init --force`
+3. Enable logging: `/van logging enable` (in Claude Code session)
+4. Run workflow: `/van "your task"`
+5. Check logs: `wc -l .claude/memory/logs/current/hooks.jsonl`
+
+### 🙏 Credits
+
+This fix was inspired by user feedback: "never rely on the hub to do something it might miss - if it runs a file you can validate it creates a flag that its run"
+
+---
+
 ## [2.0.6] - 2025-08-16
 
 ### 🔧 Fixed

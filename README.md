@@ -141,6 +141,64 @@ npx claude-code-collective clean
 npx claude-code-collective --help
 ```
 
+## Deterministic Logging System (v3.0+)
+
+The collective includes a **deterministic logging system** that captures complete audit trails of all workflow activities. Perfect for debugging, research, and understanding how agents make decisions.
+
+### What gets logged
+
+When enabled, the system captures:
+- **Hook decisions** - Every allow/deny decision with reasoning
+- **Memory operations** - All task status updates and changes
+- **WBS rollups** - Automatic status propagation through task hierarchy
+- **TDD enforcement** - Test validation and file creation checks
+
+### How to use it
+
+```bash
+# In Claude Code session
+
+# Enable logging (creates toggle file + log directories)
+/van logging enable
+
+# Run your workflow
+/van "build me a todo app"
+
+# Check status and view recent events
+/van logging status
+
+# Disable when done
+/van logging disable
+```
+
+### Viewing logs
+
+Logs are stored in JSONL format (one JSON event per line) for easy analysis:
+
+```bash
+# Count events
+wc -l .claude/memory/logs/current/hooks.jsonl
+wc -l .claude/memory/logs/current/memory.jsonl
+
+# View hook decisions
+jq '.hook + " | " + .decision + " | " + .reason' .claude/memory/logs/current/hooks.jsonl
+
+# View memory operations
+jq 'select(.type=="memory") | .op + " | " + .file' .claude/memory/logs/current/memory.jsonl
+
+# View WBS rollups
+jq 'select(.type=="rollup") | "Task " + .taskId + " → " + .newStatus' .claude/memory/logs/current/memory.jsonl
+```
+
+### Why this matters
+
+- **Complete audit trail** - See exactly what hooks decided and why
+- **Deterministic behavior** - Scripts guarantee toggle file creation (no instruction ambiguity)
+- **Research-friendly** - JSONL format makes analysis easy with jq/Python
+- **Debugging aid** - Understand why workflows succeeded or failed
+
+The logging system is **opt-in** and has zero performance impact when disabled.
+
 ## Current state (honest assessment)
 
 ### What works well

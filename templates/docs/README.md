@@ -77,6 +77,45 @@ The @routing-agent will analyze your request and select the best agent:
 - **Logs**: Review `/tmp/collective-*.log` for detailed activity
 - **Status**: Run `npx claude-code-collective status` for health check
 
+### Deterministic Logging System (v3.0+)
+
+The collective includes a deterministic logging system that captures complete audit trails of all workflow activities.
+
+**Enable logging:**
+```
+/van logging enable
+```
+
+**View recent activity:**
+```
+/van logging status
+```
+
+**Disable logging:**
+```
+/van logging disable
+```
+
+**What gets logged:**
+- Hook decisions (PreToolUse, SubagentStop) with reasoning
+- Memory operations (task status updates, WBS rollups)
+- TDD enforcement decisions
+- Complete workflow audit trail
+
+Logs are stored in `.claude/memory/logs/current/` in JSONL format for easy analysis with jq or Python.
+
+**Example queries:**
+```bash
+# Count events
+wc -l .claude/memory/logs/current/hooks.jsonl
+
+# View hook decisions
+jq '.hook + " | " + .decision + " | " + .reason' .claude/memory/logs/current/hooks.jsonl
+
+# View task rollups
+jq 'select(.type=="rollup")' .claude/memory/logs/current/memory.jsonl
+```
+
 ## 📊 Research Framework
 
 This collective is designed to prove three key hypotheses:
