@@ -57,12 +57,13 @@ JSON
   exit 2
 fi
 
-# 2. Check dependencies satisfied
+# 2. Check dependencies satisfied AND validate previous work (defensive check)
 DEPS=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | (.dependencies // [])[]" "$TASKS_INDEX" 2>/dev/null || echo "")
 
 if [[ -n "$DEPS" ]]; then
   ALL_DONE=true
   FAILED_DEPS=""
+  MISSING_DELIVERABLES=""
 
   while IFS= read -r dep; do
     if [[ -z "$dep" ]]; then continue; fi
@@ -72,20 +73,48 @@ if [[ -n "$DEPS" ]]; then
     if [[ "$dep_status" != "done" ]]; then
       ALL_DONE=false
       FAILED_DEPS="$FAILED_DEPS $dep($dep_status)"
+    else
+      # Defensive validation: If task marked "done", verify deliverables actually exist
+      deliverables=$(jq -r ".tasks[] | select(.id==\"$dep\") | (.deliverables // [])[]" "$TASKS_INDEX" 2>/dev/null || echo "")
+      if [[ -n "$deliverables" ]]; then
+        while IFS= read -r file; do
+          if [[ -z "$file" ]]; then continue; fi
+          if [[ ! -f "$file" ]]; then
+            ALL_DONE=false
+            MISSING_DELIVERABLES="$MISSING_DELIVERABLES $file"
+          fi
+        done <<< "$deliverables"
+      fi
     fi
   done <<< "$DEPS"
 
   if [[ "$ALL_DONE" != true ]]; then
-    log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Dependencies not satisfied:$FAILED_DEPS" "{\"depsSatisfied\":false,\"failedDeps\":\"$FAILED_DEPS\"}"
+    if [[ -n "$MISSING_DELIVERABLES" ]]; then
+      # SubagentStop validation failed - deliverables missing
+      log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Dependencies marked done but deliverables missing:$MISSING_DELIVERABLES" "{\"depsSatisfied\":false,\"validationFailed\":true,\"missingFiles\":\"$MISSING_DELIVERABLES\"}"
 
-    cat <<JSON
+      cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Task $TASK_ID blocked - previous validation failed. Missing deliverables:$MISSING_DELIVERABLES"}}
+JSON
+    else
+      log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Dependencies not satisfied:$FAILED_DEPS" "{\"depsSatisfied\":false,\"failedDeps\":\"$FAILED_DEPS\"}"
+
+      cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Task $TASK_ID blocked - dependencies not satisfied:$FAILED_DEPS"}}
 JSON
+    fi
     exit 2
   fi
 fi
 
-# All checks passed - allow
-log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "Leaf task, dependencies satisfied" '{"isLeaf":true,"depsSatisfied":true}'
+# All checks passed - mark task in-progress and allow
+# shellcheck disable=SC1091
+source "$LIB_DIR/memory.sh" || { echo "ERROR: Unable to source memory.sh" >&2; exit 0; }
+
+# Mark task as in-progress (deterministic operation, logged!)
+with_memory_lock "$TASKS_INDEX" memory_update_json "$TASKS_INDEX" \
+  ".tasks[] |= if .id == \"$TASK_ID\" then .status=\"in-progress\" else . end" || true
+
+log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "Leaf task, dependencies satisfied, marked in-progress" '{"isLeaf":true,"depsSatisfied":true,"statusUpdated":"in-progress"}'
 
 exit 0
