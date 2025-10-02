@@ -1,150 +1,157 @@
-# /van logging - Logging System Control
+# /van logging - Deterministic Logging System Control
 
 Control the deterministic logging system for hooks and memory operations.
 
 ## Subcommands
 
 ### `/van logging enable`
-Enable logging system to capture hook executions, memory operations, and status roll-ups.
+
+Enable the deterministic logging system.
 
 **Steps:**
-1. Create `.claude/memory/.logging-enabled` toggle file
-2. Display confirmation message with log directory location
-3. Explain what will be logged (hooks, memory ops, roll-ups)
+1. Create `.claude/memory/.logging-enabled` toggle file (empty file)
+2. Create log directory structure
+3. Display confirmation with instructions
+
+**Implementation:**
+```bash
+# Create toggle file
+touch .claude/memory/.logging-enabled
+
+# Create log directories
+mkdir -p .claude/memory/logs/current
+
+# Display confirmation
+```
 
 **Output:**
 ```
-📊 Logging enabled - logs in .claude/memory/logs/current/
+📊 Logging System ENABLED
 
-What gets logged:
-- Hook executions (pre-agent-deploy, subagent-validation, tdd-gate)
-- Memory operations (reads, writes, updates)
-- WBS status roll-ups (parent status calculations)
+Deterministic logging is now active. Hooks will log:
+- Hook execution decisions (PreToolUse, SubagentStop)
+- Memory operations (write, read, update)
+- WBS rollup calculations
 
-Log files:
-- hooks.jsonl - All hook decisions and checks
-- memory.jsonl - All memory/WBS operations
-- session-info.json - Session metadata
+Log files (JSONL format):
+- .claude/memory/logs/current/hooks.jsonl
+- .claude/memory/logs/current/memory.jsonl
 
-Use 'jq' to query logs:
-  jq -r 'select(.type=="hook") | [.ts, .hook, .decision, .reason] | @tsv' .claude/memory/logs/current/hooks.jsonl
+Query logs with jq:
+  jq '.type == "hook"' .claude/memory/logs/current/hooks.jsonl
+  jq '.type == "memory"' .claude/memory/logs/current/memory.jsonl
+
+Disable: /van logging disable
+Status: /van logging status
 ```
 
 ### `/van logging disable`
-Disable logging system to stop capturing events.
+
+Disable the deterministic logging system.
 
 **Steps:**
 1. Remove `.claude/memory/.logging-enabled` toggle file
-2. Display confirmation message
-3. Note that existing logs are preserved
+2. Display confirmation
+
+**Implementation:**
+```bash
+# Remove toggle file
+rm -f .claude/memory/.logging-enabled
+
+# Display confirmation
+```
 
 **Output:**
 ```
-📊 Logging disabled
+📊 Logging System DISABLED
 
+Hooks will no longer write log entries.
 Existing logs preserved in .claude/memory/logs/current/
+
 To re-enable: /van logging enable
 ```
 
 ### `/van logging status`
-Show current logging status and recent activity summary.
+
+Show current logging status and recent activity.
 
 **Steps:**
 1. Check if `.claude/memory/.logging-enabled` exists
-2. If enabled, show:
-   - Status: ENABLED
-   - Log directory location
-   - Recent hook activity count (last 10 entries)
-   - Recent memory operations count (last 10 entries)
-   - Last logged event timestamp
-3. If disabled, show:
-   - Status: DISABLED
-   - How to enable
+2. If enabled:
+   - Show status and log locations
+   - Read last 5 entries from hooks.jsonl
+   - Read last 5 entries from memory.jsonl
+   - Show summary
+3. If disabled:
+   - Show how to enable
+
+**Implementation:**
+```bash
+# Check toggle file
+if [[ -f .claude/memory/.logging-enabled ]]; then
+  echo "Status: ENABLED"
+
+  # Show recent hook events
+  tail -5 .claude/memory/logs/current/hooks.jsonl
+
+  # Show recent memory operations
+  tail -5 .claude/memory/logs/current/memory.jsonl
+else
+  echo "Status: DISABLED"
+fi
+```
 
 **Output (Enabled):**
 ```
 📊 Logging Status: ENABLED
-📂 Log Directory: .claude/memory/logs/current/
 
-Recent Activity:
-- Hooks: 15 events (last: 2025-10-02T14:32:15Z)
-- Memory: 23 operations (last: 2025-10-02T14:32:10Z)
+Recent Hook Events (last 5):
+{"ts":"2025-10-02T14:32:15Z","type":"hook","hook":"PreToolUse","tool":"Task","taskId":"1.2.3","decision":"allow",...}
+{"ts":"2025-10-02T14:30:42Z","type":"hook","hook":"SubagentStop","taskId":"1.2.3","decision":"allow",...}
 
-Last Hook Events:
-  2025-10-02T14:32:15Z | PreToolUse    | allow | Leaf task, dependencies satisfied
-  2025-10-02T14:30:42Z | SubagentStop  | allow | Validation passed
-  2025-10-02T14:28:19Z | PreToolUse    | deny  | Task has children
+Recent Memory Operations (last 5):
+{"ts":"2025-10-02T14:32:16Z","type":"memory","op":"update","file":".claude/memory/task-index.json",...}
+{"ts":"2025-10-02T14:32:17Z","type":"rollup","taskId":"1.2","newStatus":"done","progress":"2/2"}
 
 Commands:
   /van logging disable - Stop logging
-  jq '.type == "hook"' .claude/memory/logs/current/hooks.jsonl - Query hook logs
+  jq -r '.hook' .claude/memory/logs/current/hooks.jsonl - Query hooks
 ```
 
 **Output (Disabled):**
 ```
 📊 Logging Status: DISABLED
 
-To enable logging:
-  /van logging enable
+To enable: /van logging enable
 
-What gets logged when enabled:
-- Hook execution decisions (allow/deny/ask)
-- Memory operations (read/write/update)
-- WBS status roll-ups
-```
-
-### `/van logging query <type>`
-Query recent log entries by type.
-
-**Arguments:**
-- `<type>` - Log type to query: `hooks`, `memory`, or `all`
-
-**Steps:**
-1. Check logging is enabled
-2. Use `jq` to extract and format recent entries
-3. Display in human-readable format
-
-**Output:**
-```
-📊 Recent Hook Events (last 20):
-
-2025-10-02T14:32:15Z | PreToolUse    | Task | 1.2.3 | allow | Leaf task, dependencies satisfied
-  Checks: {"isLeaf":true,"depsSatisfied":true}
-
-2025-10-02T14:30:42Z | SubagentStop  | -    | 1.2.3 | allow | Validation passed
-  Checks: {"testsPass":true,"deliverablesExist":true}
-
-2025-10-02T14:28:19Z | PreToolUse    | Task | 1.2   | deny  | Task has children: 1.2.1 1.2.2
-  Checks: {"isLeaf":false,"children":"1.2.1 1.2.2"}
-```
-
-### `/van logging archive`
-Archive current session logs and start fresh.
-
-**Steps:**
-1. Check if current logs exist
-2. Create archive directory: `.claude/memory/logs/archive/<timestamp>/`
-3. Move current logs to archive
-4. Display confirmation
-
-**Output:**
-```
-📊 Logs archived to .claude/memory/logs/archive/2025-10-02T14-35-42Z/
-
-Archived files:
-- hooks.jsonl (1,247 events)
-- memory.jsonl (3,892 operations)
-- session-info.json
-
-New session started - logs will write to .claude/memory/logs/current/
+When enabled, hooks will log:
+- PreToolUse decisions (task validation)
+- SubagentStop decisions (completion validation)
+- Memory writes/updates
+- WBS rollup calculations
 ```
 
 ## Implementation Notes
 
-All commands use the logging library functions from `.claude/memory/lib/logging.sh`:
-- `is_logging_enabled()` - Check toggle state
-- `enable_logging()` - Create toggle file
-- `disable_logging()` - Remove toggle file
-- `get_logging_status()` - Get current status
+**CRITICAL:** The logging system uses `.claude/memory/.logging-enabled` as the toggle file.
 
-Commands should use `jq` for querying JSONL logs and format output clearly for human readability.
+**Hooks check:**
+```bash
+source .claude/memory/lib/logging.sh
+if is_logging_enabled; then
+  log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "reason" '{"data":"value"}'
+fi
+```
+
+**The toggle file:**
+- Empty file, just needs to exist
+- Location: `.claude/memory/.logging-enabled`
+- Created by: `/van logging enable`
+- Removed by: `/van logging disable`
+- Checked by: `is_logging_enabled()` function in logging.sh
+
+**Log format:**
+- JSONL (one JSON object per line)
+- Use `jq` for querying
+- Append-only for performance
+- Atomic writes via logging.sh functions
