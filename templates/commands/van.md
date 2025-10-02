@@ -4,6 +4,16 @@
 
 ---
 
+## Logging System
+
+**IMPORTANT:** If user has enabled logging (`/van logging enable`), all hook decisions and memory operations are logged to:
+- `.claude/memory/logs/current/hooks.jsonl` - All hook execution decisions
+- `.claude/memory/logs/current/memory.jsonl` - All memory operations and WBS rollups
+
+**Hook logging is automatic - you do NOT log anything.** Hooks check for `.claude/memory/.logging-enabled` toggle file and log themselves.
+
+---
+
 ## Instructions
 
 When user provides a request, you automatically execute this workflow combining WBS task management with strict TDD methodology.
@@ -185,7 +195,6 @@ Deploying @test-first-agent for task 1.1.1...
 [PreToolUse(Task) hook runs]
   ✅ Task 1.1.1 is leaf (no children)
   ✅ Dependencies satisfied (none)
-  📊 Logged to hooks.jsonl
   → ALLOW deployment
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -208,7 +217,6 @@ STEP 5: Validation (SubagentStop Hook)
   ✅ Rolling up status:
      - Feature 1.1: 1/2 tasks complete → "in-progress"
      - Epic 1: 1/4 tasks complete → "in-progress"
-  📊 Logged to hooks.jsonl and memory.jsonl
 
 → ALLOW Hub to proceed
 
@@ -231,7 +239,6 @@ Deploying @component-implementation-agent for task 1.1.2...
   ✅ Task 1.1.2 is leaf
   ✅ Dependency 1.1.1 = done
   ✅ Defensive check: src/LoginForm.test.jsx exists
-  📊 Logged to hooks.jsonl
   → ALLOW deployment
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -257,7 +264,6 @@ STEP 5: Validation (SubagentStop Hook)
   ✅ Rolling up status:
      - Feature 1.1: 2/2 tasks complete → "done"
      - Epic 1: 2/4 tasks complete → "in-progress"
-  📊 Logged to hooks.jsonl and memory.jsonl
 
 → ALLOW Hub to proceed
 
@@ -281,12 +287,12 @@ Epic 1: Login Form Component → DONE (2/2 features complete)
   ✅ src/validation.test.js
   ✅ src/validation.js
 
-📊 Logs Created:
-  ✅ .claude/memory/logs/current/hooks.jsonl (8 hook events)
-  ✅ .claude/memory/logs/current/memory.jsonl (12 memory operations)
-
 🎉 PROJECT COMPLETE
 All tasks validated deterministically through WBS + TDD + hooks.
+
+💡 If logging is enabled (/van logging enable), all hook decisions and memory operations have been logged to:
+   - .claude/memory/logs/current/hooks.jsonl
+   - .claude/memory/logs/current/memory.jsonl
 ```
 
 ## How It Works (Critical Understanding)

@@ -8,128 +8,54 @@ Control the deterministic logging system for hooks and memory operations.
 
 Enable the deterministic logging system.
 
-**Steps:**
-1. Create `.claude/memory/.logging-enabled` toggle file (empty file)
-2. Create log directory structure
-3. Display confirmation with instructions
-
 **Implementation:**
+Execute the logging enable script:
 ```bash
-# Create toggle file
-touch .claude/memory/.logging-enabled
-
-# Create log directories
-mkdir -p .claude/memory/logs/current
-
-# Display confirmation
+bash .claude/memory/lib/logging-enable.sh
 ```
 
-**Output:**
-```
-📊 Logging System ENABLED
+This script GUARANTEES:
+- Toggle file `.claude/memory/.logging-enabled` is created
+- Log directories exist
+- Log files are initialized
+- System verifies toggle file creation
 
-Deterministic logging is now active. Hooks will log:
-- Hook execution decisions (PreToolUse, SubagentStop)
-- Memory operations (write, read, update)
-- WBS rollup calculations
-
-Log files (JSONL format):
-- .claude/memory/logs/current/hooks.jsonl
-- .claude/memory/logs/current/memory.jsonl
-
-Query logs with jq:
-  jq '.type == "hook"' .claude/memory/logs/current/hooks.jsonl
-  jq '.type == "memory"' .claude/memory/logs/current/memory.jsonl
-
-Disable: /van logging disable
-Status: /van logging status
-```
+**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
 
 ### `/van logging disable`
 
 Disable the deterministic logging system.
 
-**Steps:**
-1. Remove `.claude/memory/.logging-enabled` toggle file
-2. Display confirmation
-
 **Implementation:**
+Execute the logging disable script:
 ```bash
-# Remove toggle file
-rm -f .claude/memory/.logging-enabled
-
-# Display confirmation
+bash .claude/memory/lib/logging-disable.sh
 ```
 
-**Output:**
-```
-📊 Logging System DISABLED
+This script GUARANTEES:
+- Toggle file `.claude/memory/.logging-enabled` is removed
+- System verifies toggle file deletion
+- Existing logs are preserved
 
-Hooks will no longer write log entries.
-Existing logs preserved in .claude/memory/logs/current/
-
-To re-enable: /van logging enable
-```
+**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
 
 ### `/van logging status`
 
 Show current logging status and recent activity.
 
-**Steps:**
-1. Check if `.claude/memory/.logging-enabled` exists
-2. If enabled:
-   - Show status and log locations
-   - Read last 5 entries from hooks.jsonl
-   - Read last 5 entries from memory.jsonl
-   - Show summary
-3. If disabled:
-   - Show how to enable
-
 **Implementation:**
+Execute the logging status script:
 ```bash
-# Check toggle file
-if [[ -f .claude/memory/.logging-enabled ]]; then
-  echo "Status: ENABLED"
-
-  # Show recent hook events
-  tail -5 .claude/memory/logs/current/hooks.jsonl
-
-  # Show recent memory operations
-  tail -5 .claude/memory/logs/current/memory.jsonl
-else
-  echo "Status: DISABLED"
-fi
+bash .claude/memory/lib/logging-status.sh
 ```
 
-**Output (Enabled):**
-```
-📊 Logging Status: ENABLED
+This script:
+- Checks if logging is enabled (toggle file exists)
+- Shows recent hook events (last 5)
+- Shows recent memory operations (last 5)
+- Provides query commands for log analysis
 
-Recent Hook Events (last 5):
-{"ts":"2025-10-02T14:32:15Z","type":"hook","hook":"PreToolUse","tool":"Task","taskId":"1.2.3","decision":"allow",...}
-{"ts":"2025-10-02T14:30:42Z","type":"hook","hook":"SubagentStop","taskId":"1.2.3","decision":"allow",...}
-
-Recent Memory Operations (last 5):
-{"ts":"2025-10-02T14:32:16Z","type":"memory","op":"update","file":".claude/memory/task-index.json",...}
-{"ts":"2025-10-02T14:32:17Z","type":"rollup","taskId":"1.2","newStatus":"done","progress":"2/2"}
-
-Commands:
-  /van logging disable - Stop logging
-  jq -r '.hook' .claude/memory/logs/current/hooks.jsonl - Query hooks
-```
-
-**Output (Disabled):**
-```
-📊 Logging Status: DISABLED
-
-To enable: /van logging enable
-
-When enabled, hooks will log:
-- PreToolUse decisions (task validation)
-- SubagentStop decisions (completion validation)
-- Memory writes/updates
-- WBS rollup calculations
-```
+**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
 
 ## Implementation Notes
 
