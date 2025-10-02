@@ -8,54 +8,60 @@ Control the deterministic logging system for hooks and memory operations.
 
 Enable the deterministic logging system.
 
-**Implementation:**
-Execute the logging enable script:
+**What you do:**
+Run the deterministic logging enable script using the Bash tool:
+
 ```bash
 bash .claude/memory/lib/logging-enable.sh
 ```
 
-This script GUARANTEES:
-- Toggle file `.claude/memory/.logging-enabled` is created
-- Log directories exist
-- Log files are initialized
-- System verifies toggle file creation
+**What the script does (automatically):**
+- Creates `.claude/memory/.logging-enabled` toggle file
+- Creates log directories
+- Initializes log files
+- Verifies toggle file was created
+- Displays confirmation message
 
-**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
+**Output the script's message to the user directly.** The script guarantees deterministic behavior.
 
 ### `/van logging disable`
 
 Disable the deterministic logging system.
 
-**Implementation:**
-Execute the logging disable script:
+**What you do:**
+Run the deterministic logging disable script using the Bash tool:
+
 ```bash
 bash .claude/memory/lib/logging-disable.sh
 ```
 
-This script GUARANTEES:
-- Toggle file `.claude/memory/.logging-enabled` is removed
-- System verifies toggle file deletion
-- Existing logs are preserved
+**What the script does (automatically):**
+- Removes `.claude/memory/.logging-enabled` toggle file
+- Verifies toggle file was removed
+- Preserves existing logs
+- Displays confirmation message
 
-**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
+**Output the script's message to the user directly.** The script guarantees deterministic behavior.
 
 ### `/van logging status`
 
 Show current logging status and recent activity.
 
-**Implementation:**
-Execute the logging status script:
+**What you do:**
+Run the deterministic logging status script using the Bash tool:
+
 ```bash
 bash .claude/memory/lib/logging-status.sh
 ```
 
-This script:
+**What the script does (automatically):**
 - Checks if logging is enabled (toggle file exists)
 - Shows recent hook events (last 5)
 - Shows recent memory operations (last 5)
 - Provides query commands for log analysis
+- Displays status report
 
-**CRITICAL:** Do NOT manually run commands. Always use the script to ensure deterministic behavior.
+**Output the script's message to the user directly.** The script guarantees deterministic behavior.
 
 ## Implementation Notes
 
