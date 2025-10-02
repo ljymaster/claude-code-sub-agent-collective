@@ -22,12 +22,14 @@ STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/nul
 
 # Prevent infinite loops when stop hook is already active
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
+  log_hook_event "SubagentStop" "" "" "allow" "Stop hook already active - preventing recursion" '{"stopHookActive":true}'
   echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"Stop hook already active"}}'
   exit 0
 fi
 
-# If no index exists, nothing to validate
+# If no index exists, nothing to validate (LOG this)
 if [[ ! -f "$TASKS_INDEX" ]]; then
+  log_hook_event "SubagentStop" "" "" "allow" "No task index - allowing agent completion" '{"taskIndexExists":false}'
   echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"No task index present"}}'
   exit 0
 fi
@@ -48,6 +50,7 @@ if [[ -z "$TASK_ID" ]]; then
 fi
 
 if [[ -z "${TASK_ID:-}" || "$TASK_ID" == "null" ]]; then
+  log_hook_event "SubagentStop" "" "" "allow" "No task ID found - allowing agent completion" '{"taskIdFound":false}'
   echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"No task detected for validation"}}'
   exit 0
 fi
