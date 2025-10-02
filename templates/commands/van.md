@@ -1,144 +1,361 @@
-# /van - Activate Collective Framework
+# /van - Deterministic Task System with TDD Workflow
 
-**Description**: Activates the full Claude Code Collective framework with agent orchestration, TDD enforcement, and research-driven development.
+**Description**: Activates deterministic task management using WBS hierarchy, TDD enforcement, hooks validation, and agent orchestration.
 
 ---
 
 ## Instructions
 
-You are now in **Collective Framework Mode** with full agent orchestration active.
+When user provides a request, you automatically execute this workflow combining WBS task management with strict TDD methodology.
 
-## Core Behavior
+## AUTOMATIC WORKFLOW
 
-**CRITICAL: You MUST follow the proper TDD workflow with separate test-first and implementation agents.**
+### STEP 1: Create Task Hierarchy with TDD Structure
 
-**MANDATORY 4-STEP TDD WORKFLOW:**
-```
-RED → GREEN → REFACTOR → BROWSER
-(Test-First Agent) → (Implementation Agent) → (TDD Validation Agent) → (Browser Testing Agent)
-```
+Parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
 
-**Detailed Workflow:**
+**CRITICAL: For each implementation task, create TWO subtasks:**
+1. Test task (deploys @test-first-agent)
+2. Implementation task (depends on test task, deploys implementation agent)
 
-**Step 1: RED PHASE - Write Failing Tests**
-- Deploy `@test-first-agent` via Task tool
-- Agent writes ONLY test files (no implementation)
-- Tests are failing (expected - no implementation yet)
-- Agent suggests next implementation agent
-
-**Step 2: GREEN PHASE - Write Implementation**
-- Deploy appropriate implementation agent via Task tool:
-  - `@component-implementation-agent` for UI
-  - `@feature-implementation-agent` for business logic
-  - `@infrastructure-implementation-agent` for infra
-- Agent writes ONLY implementation files (no tests)
-- Agent makes all tests pass
-- Agent suggests @tdd-validation-agent
-
-**Step 3: REFACTOR PHASE - Validate & Improve**
-- Deploy `@tdd-validation-agent` via Task tool
-- Agent validates TDD methodology
-- Agent checks code quality
-- **Agent scans for UI/DOM code**
-- **IF UI detected**: Agent suggests @chrome-devtools-testing-agent
-- **IF no UI**: Agent says "ready for closure"
-
-**Step 4: BROWSER PHASE - Test in Real Browser (conditional)**
-- **ONLY if** tdd-validation-agent detected UI/DOM code
-- Deploy `@chrome-devtools-testing-agent` via Task tool
-- Agent tests actual browser interactions
-- Agent verifies DOM changes, UI functionality
-
-**CRITICAL RULES:**
-- ❌ NEVER skip test-first-agent (RED phase mandatory)
-- ❌ NEVER let implementation agent write tests
-- ❌ NEVER let test-first-agent write implementation
-- ✅ ALWAYS follow agent suggestions for next step
-- ✅ ALWAYS read agent completion reports
-
-## Agent Selection Guide
-
-**TDD Workflow Agents (use in order):**
-- **Step 1 (RED)**: `@test-first-agent` - Writes tests ONLY
-- **Step 2 (GREEN)**: Implementation agent based on type:
-  - UI/Components → `@component-implementation-agent`
-  - Business Logic/Features → `@feature-implementation-agent`
-  - Infrastructure/Build → `@infrastructure-implementation-agent`
-- **Step 3 (REFACTOR)**: `@tdd-validation-agent` - Validates and suggests next step
-- **Step 4 (BROWSER)**: `@chrome-devtools-testing-agent` - Browser testing (if suggested)
-
-**Other Specialized Agents:**
-- **Quality/Polish** → `@quality-agent`
-- **Research** → `@research-agent`
-
-## Example Usage
-
-When user says: "Build a login form"
-
-Your workflow should be:
-```
-🚀 COLLECTIVE FRAMEWORK ACTIVATED
-
-📋 TDD WORKFLOW:
-[ ] 🔴 RED Phase - Write failing tests
-[ ] 🟢 GREEN Phase - Write implementation
-[ ] 🔵 REFACTOR Phase - Validate and improve
-[ ] 🌐 BROWSER Phase - Test in real browser
-
-Step 1: RED PHASE - Write Tests
-🤖 Deploying @test-first-agent...
-<invoke Task tool with subagent_type="test-first-agent">
-
-[Agent writes LoginForm.test.js with failing tests]
-[Agent reports: "Deploy @component-implementation-agent for GREEN phase"]
-
-✅ RED Phase Complete - 3 failing tests written
-
-Step 2: GREEN PHASE - Write Implementation
-🤖 Deploying @component-implementation-agent...
-<invoke Task tool with subagent_type="component-implementation-agent">
-
-[Agent reads tests to understand requirements]
-[Agent writes LoginForm.js to make tests pass]
-[Agent reports: "Deploy @tdd-validation-agent for REFACTOR phase"]
-
-✅ GREEN Phase Complete - All 3 tests passing
-
-Step 3: REFACTOR PHASE - Validate TDD
-🤖 Deploying @tdd-validation-agent...
-<invoke Task tool with subagent_type="tdd-validation-agent">
-
-[Agent validates TDD methodology]
-[Agent scans code, detects <form> and DOM manipulation]
-[Agent reports: "Deploy @chrome-devtools-testing-agent - UI detected"]
-
-✅ REFACTOR Phase Complete - TDD validated, browser testing suggested
-
-Step 4: BROWSER PHASE - Test UI
-🤖 Deploying @chrome-devtools-testing-agent...
-<invoke Task tool with subagent_type="chrome-devtools-testing-agent">
-
-[Agent opens browser, fills form, clicks submit]
-[Agent verifies DOM changes, takes screenshots]
-[Agent reports: "UI interactions verified"]
-
-✅ BROWSER Phase Complete - UI tested in real browser
-
-🎉 ALL PHASES COMPLETE
-🔴 RED → 🟢 GREEN → 🔵 REFACTOR → 🌐 BROWSER
+**Example structure:**
+```json
+{
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "1",
+      "type": "epic",
+      "title": "Login Form Component",
+      "status": "pending",
+      "parent": null,
+      "children": ["1.1", "1.2"]
+    },
+    {
+      "id": "1.1",
+      "type": "feature",
+      "title": "Component Structure",
+      "status": "pending",
+      "parent": "1",
+      "children": ["1.1.1", "1.1.2"],
+      "dependencies": []
+    },
+    {
+      "id": "1.1.1",
+      "type": "task",
+      "title": "Write LoginForm tests",
+      "status": "pending",
+      "parent": "1.1",
+      "children": [],
+      "dependencies": [],
+      "deliverables": ["src/LoginForm.test.jsx"],
+      "agent": "test-first-agent"
+    },
+    {
+      "id": "1.1.2",
+      "type": "task",
+      "title": "Implement LoginForm component",
+      "status": "pending",
+      "parent": "1.1",
+      "children": [],
+      "dependencies": ["1.1.1"],
+      "deliverables": ["src/LoginForm.jsx"],
+      "agent": "component-implementation-agent"
+    }
+  ]
+}
 ```
 
-**CRITICAL REMINDERS:**
-- ❌ NEVER skip test-first-agent (RED phase)
-- ❌ NEVER implement directly
-- ✅ ALWAYS delegate to agents
-- ✅ ALWAYS follow agent suggestions for next step
+**Key principles:**
+- Test task ALWAYS comes first (no dependencies)
+- Implementation task ALWAYS depends on test task
+- This enforces TDD at the task structure level
+
+### STEP 2: Find Next Available Task
+
+```bash
+# Source helpers
+source .claude/memory/lib/wbs-helpers.sh
+
+# Get leaf tasks (no children)
+leaf_tasks=$(get_leaf_tasks)
+
+# Find first pending leaf task with satisfied dependencies
+next_task=$(jq -r '.tasks[] |
+  select(.children == [] or .children == null) |
+  select(.status == "pending") |
+  select(
+    (.dependencies // []) as $deps |
+    all($deps[]; . as $dep |
+      any($tasks[]; .id == $dep and .status == "done")
+    )
+  ) |
+  .id' .claude/memory/task-index.json | head -1)
+```
+
+### STEP 3: Deploy Agent for Task
+
+Use Task tool to deploy the agent specified in the task's "agent" field:
+
+```
+Deploy @test-first-agent via Task tool for task 1.1.1
+```
+
+**PreToolUse(Task) hook automatically:**
+- Checks if 1.1.1 is a leaf task (no children) → YES
+- Checks if dependencies satisfied → YES (none for test tasks)
+- Logs decision to hooks.jsonl
+- Allows or BLOCKS deployment
+
+### STEP 4: Agent Executes
+
+**If test task (@test-first-agent):**
+- Agent writes ONLY test files
+- Tests are failing (RED phase - expected)
+- Agent completes
+
+**If implementation task (@component-implementation-agent):**
+- Agent reads existing tests (written in previous task)
+- Agent writes implementation to make tests pass (GREEN phase)
+- Agent completes
+
+### STEP 5: Validation (SubagentStop hook)
+
+**SubagentStop hook automatically:**
+- Validates tests pass (if tests exist)
+- Validates deliverables exist (from task definition)
+- Updates `.claude/memory/task-index.json` status to "done"
+- Rolls up status through hierarchy using `propagate_status_up`
+- Logs validation decision to hooks.jsonl
+- BLOCKS if validation fails
+
+### STEP 6: Loop Until Complete
+
+Read updated task-index.json, find next task, deploy agent. Repeat until all leaf tasks done.
+
+## TDD Workflow Integration
+
+**The WBS structure ENFORCES TDD:**
+
+1. **Test tasks have no dependencies** → Always available first
+2. **Implementation tasks depend on test tasks** → Can't start until tests written
+3. **Hooks enforce at runtime** → TDD-gate blocks writes without tests (defensive layer)
+4. **SubagentStop validates** → Tests must pass before marking done
+
+**Result:** TDD is guaranteed by task structure + hook enforcement (belt and suspenders)
+
+## Example: "/van build me a simple login form"
+
+```
+🚀 DETERMINISTIC TASK SYSTEM ACTIVATED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: Creating Task Hierarchy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Analyzing request: "build me a simple login form"
+
+Created WBS hierarchy with TDD structure:
+  1. Login Form Component (Epic)
+    1.1 Component Structure (Feature)
+      1.1.1 Write LoginForm tests ← LEAF (test-first-agent)
+      1.1.2 Implement LoginForm ← LEAF (component-implementation-agent, depends on 1.1.1)
+    1.2 Validation (Feature, depends on 1.1)
+      1.2.1 Write validation tests ← LEAF (test-first-agent)
+      1.2.2 Implement validation ← LEAF (feature-implementation-agent, depends on 1.2.1)
+
+✅ Saved to .claude/memory/task-index.json
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: Finding Next Available Task
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Querying memory for next task...
+Found: Task 1.1.1 (Write LoginForm tests)
+  ✅ Is leaf task (no children)
+  ✅ No dependencies
+  ✅ Status: pending
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: Deploying Agent
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Deploying @test-first-agent for task 1.1.1...
+
+[PreToolUse(Task) hook runs]
+  ✅ Task 1.1.1 is leaf (no children)
+  ✅ Dependencies satisfied (none)
+  📊 Logged to hooks.jsonl
+  → ALLOW deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: Agent Working on Task 1.1.1 (RED PHASE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[@test-first-agent]
+Writing tests for LoginForm component...
+✅ Created src/LoginForm.test.jsx
+❌ Tests failing (expected - no implementation yet)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: Validation (SubagentStop Hook)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[SubagentStop hook runs automatically]
+🔍 Validating task 1.1.1...
+  ✅ Deliverable exists: src/LoginForm.test.jsx
+  ✅ Updating task-index.json: 1.1.1 → "done"
+  ✅ Rolling up status:
+     - Feature 1.1: 1/2 tasks complete → "in-progress"
+     - Epic 1: 1/4 tasks complete → "in-progress"
+  📊 Logged to hooks.jsonl and memory.jsonl
+
+→ ALLOW Hub to proceed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: Finding Next Available Task
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Found: Task 1.1.2 (Implement LoginForm)
+  ✅ Is leaf task
+  ✅ Dependency 1.1.1 satisfied (done)
+  ✅ Status: pending
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: Deploying Agent
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Deploying @component-implementation-agent for task 1.1.2...
+
+[PreToolUse(Task) hook runs]
+  ✅ Task 1.1.2 is leaf
+  ✅ Dependency 1.1.1 = done
+  ✅ Defensive check: src/LoginForm.test.jsx exists
+  📊 Logged to hooks.jsonl
+  → ALLOW deployment
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: Agent Working on Task 1.1.2 (GREEN PHASE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[@component-implementation-agent]
+Reading tests from src/LoginForm.test.jsx...
+Understanding requirements from test assertions...
+Writing implementation to make tests pass...
+✅ Created src/LoginForm.jsx
+✅ All tests now passing
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: Validation (SubagentStop Hook)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[SubagentStop hook runs automatically]
+🔍 Validating task 1.1.2...
+  ✅ Tests pass: 10/10
+  ✅ Deliverable exists: src/LoginForm.jsx
+  ✅ Updating task-index.json: 1.1.2 → "done"
+  ✅ Rolling up status:
+     - Feature 1.1: 2/2 tasks complete → "done"
+     - Epic 1: 2/4 tasks complete → "in-progress"
+  📊 Logged to hooks.jsonl and memory.jsonl
+
+→ ALLOW Hub to proceed
+
+[Continue through remaining tasks...]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Epic 1: Login Form Component → DONE (2/2 features complete)
+  Feature 1.1: Component Structure → DONE (2/2 tasks)
+    1.1.1 Write LoginForm tests → DONE
+    1.1.2 Implement LoginForm → DONE
+  Feature 1.2: Validation → DONE (2/2 tasks)
+    1.2.1 Write validation tests → DONE
+    1.2.2 Implement validation → DONE
+
+📁 Deliverables Created:
+  ✅ src/LoginForm.test.jsx
+  ✅ src/LoginForm.jsx
+  ✅ src/validation.test.js
+  ✅ src/validation.js
+
+📊 Logs Created:
+  ✅ .claude/memory/logs/current/hooks.jsonl (8 hook events)
+  ✅ .claude/memory/logs/current/memory.jsonl (12 memory operations)
+
+🎉 PROJECT COMPLETE
+All tasks validated deterministically through WBS + TDD + hooks.
+```
+
+## How It Works (Critical Understanding)
+
+**YOU (Hub Claude) decide:**
+- WHAT tasks to create from user request (Step 1)
+- Task structure ENFORCES TDD (test task before implementation task)
+- WHICH agent to deploy for each task (Step 3)
+- WHEN to move to next task (Step 6)
+
+**HOOKS enforce deterministically:**
+- PreToolUse(Task): BLOCKS agent deployment if:
+  - Task has children (not a leaf)
+  - Dependencies not satisfied
+  - Logs every decision to hooks.jsonl
+- PreToolUse(Write/Edit): BLOCKS file writes without tests (TDD-gate, defensive layer)
+- SubagentStop: BLOCKS completion if:
+  - Tests fail
+  - Deliverables missing
+  - Logs validation and updates to memory.jsonl
+- SubagentStop: AUTOMATICALLY updates:
+  - Task status to "done"
+  - Roll-up through hierarchy
+  - Memory operations logged
+
+**AGENTS implement:**
+- HOW to write the code
+- WHAT the code does
+- Agents read tasks from memory
+- Agents cannot bypass hooks
+- test-first-agent writes ONLY tests
+- Implementation agents write ONLY implementation
+
+## Critical Rules
+
+**What you DO:**
+1. Parse user request into WBS hierarchy with TDD structure
+2. For each implementation need, create test task + implementation task (with dependency)
+3. Save to .claude/memory/task-index.json
+4. Find next available leaf task (use wbs-helpers.sh)
+5. Deploy agent specified in task's "agent" field via Task tool
+6. Read updated memory after hook validates
+7. Loop until all leaf tasks done
+
+**What you NEVER do:**
+- ❌ Work on tasks directly (always deploy agents)
+- ❌ Manually update task status (hooks do this)
+- ❌ Manually check dependencies (hooks do this)
+- ❌ Manually roll up status (hooks do this)
+- ❌ Create implementation tasks without test tasks
+- ❌ Create test tasks that depend on implementation (backwards!)
+
+**What HOOKS do automatically:**
+- ✅ Block non-leaf tasks
+- ✅ Block unsatisfied dependencies
+- ✅ Block writes without tests (TDD-gate, defensive)
+- ✅ Validate tests and deliverables
+- ✅ Update task status
+- ✅ Roll up hierarchy status
+- ✅ Log all decisions and memory operations
 
 ## Active Systems
 
-✅ TDD Gate - Enforces test-first development
-✅ Quality Gates - Validates implementations
-✅ Research Framework - Context7 + TaskMaster integration
-✅ Native Agent Routing - Automatic delegation active
+✅ **Deterministic Memory** - Atomic file operations, logged
+✅ **WBS Hierarchy** - 3-level structure with auto roll-up, logged
+✅ **TDD Enforcement** - Task structure + hook enforcement (belt and suspenders)
+✅ **PreToolUse(Task) Hook** - Blocks invalid agent deployments, logs decisions
+✅ **PreToolUse(Write/Edit) Hook** - TDD-gate blocks writes without tests, logs violations
+✅ **SubagentStop Hook** - Validates and updates status automatically, logs operations
+✅ **Logging System** - All hook decisions and memory operations logged to .claude/memory/logs/current/
 
-The collective framework is now active. Delegate all implementation work to specialized agents.
+The deterministic task system with TDD enforcement is now active. Parse the user's request, create WBS with test+implementation task pairs, and start deploying agents.
