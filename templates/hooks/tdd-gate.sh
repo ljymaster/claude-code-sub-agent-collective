@@ -36,6 +36,12 @@ if [[ "$FILE_PATH" =~ package\.json|tsconfig\.json|\.config\.|\.rc$|\.yaml$|\.ym
     exit 0
 fi
 
+# Check if this is infrastructure: .claude/memory/ or .claude/hooks/ or shell scripts
+if [[ "$FILE_PATH" =~ \.claude/memory/|\.claude/hooks/|\.sh$ ]]; then
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Infrastructure file allowed"}}'
+    exit 0
+fi
+
 # Extract file directory and base name
 FILE_DIR=$(dirname "$FILE_PATH")
 FILE_NAME=$(basename "$FILE_PATH")

@@ -19,8 +19,8 @@ if [[ ! -f "$TASKS_INDEX" ]]; then
   exit 0
 fi
 
-# Determine current in-progress task (first match)
-TASK_ID=$(jq -r '.tasks[] | select(.status=="in-progress") | .id' "$TASKS_INDEX" | head -n1)
+# Determine current in-progress task (first LEAF match - tasks with no children)
+TASK_ID=$(jq -r '.tasks[] | select(.status=="in-progress" and (.children == [] or .children == null)) | .id' "$TASKS_INDEX" | head -n1)
 
 if [[ -z "${TASK_ID:-}" || "$TASK_ID" == "null" ]]; then
   echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"No in-progress task detected"}}'
