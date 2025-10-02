@@ -12,6 +12,8 @@ LIB_DIR="$MEMORY_DIR/lib"
 source "$LIB_DIR/memory.sh" || { echo "ERROR: Unable to source memory.sh" >&2; exit 0; }
 # shellcheck disable=SC1091
 source "$LIB_DIR/wbs-helpers.sh" || { echo "ERROR: Unable to source wbs-helpers.sh" >&2; exit 0; }
+# shellcheck disable=SC1091
+source "$LIB_DIR/logging.sh" 2>/dev/null || true
 
 # If no index exists, nothing to validate
 if [[ ! -f "$TASKS_INDEX" ]]; then
@@ -58,6 +60,9 @@ fi
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
+  # Log validation success
+  log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "Validation passed" "{\"testsPass\":$tests_pass,\"deliverablesExist\":$deliverables_exist}"
+
   # Update task entity (if exists)
   TASK_FILE="$MEMORY_DIR/tasks/${TASK_ID}.json"
   if [[ -f "$TASK_FILE" ]]; then
@@ -76,6 +81,9 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
 JSON
   exit 0
 else
+  # Log validation failure
+  log_hook_event "SubagentStop" "" "$TASK_ID" "deny" "Validation failed" "{\"testsPass\":$tests_pass,\"deliverablesExist\":$deliverables_exist}"
+
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"deny","permissionDecisionReason":"Task $TASK_ID validation failed: tests=$tests_pass, deliverables=$deliverables_exist"}}
 JSON

@@ -2,9 +2,13 @@
 # Deterministic helper functions for WBS operations
 # Depends on memory.sh
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/memory.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/logging.sh" 2>/dev/null || true
 
 TASKS_INDEX=".claude/memory/task-index.json"
 
@@ -65,6 +69,9 @@ calculate_rollup() {
 
   with_memory_lock "$TASKS_INDEX" memory_update_json "$TASKS_INDEX" \
     ".tasks[] |= if .id == \"$parent_id\" then (.status = \"$parent_status\" | .progress = {completed: $done, total: $total}) else . end"
+
+  # Log rollup calculation
+  log_rollup "$parent_id" "null" "$parent_status" "$done/$total"
 }
 
 propagate_status_up() {

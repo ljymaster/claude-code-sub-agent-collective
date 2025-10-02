@@ -2,6 +2,15 @@
 # Deterministic file-based memory operations for Claude Code projects
 # Location: .claude/memory/lib/memory.sh
 
+set -euo pipefail
+
+MEMORY_DIR=".claude/memory"
+LIB_DIR="$MEMORY_DIR/lib"
+
+# Source logging library
+# shellcheck disable=SC1091
+source "$LIB_DIR/logging.sh" 2>/dev/null || true
+
 # Allowed file extensions
 _MEMORY_ALLOWED_EXT="json|md|txt|yaml|yml"
 
@@ -84,6 +93,9 @@ memory_write() {
     return 1
   }
 
+  # Log successful write
+  log_memory_operation "write" "$file" "\"size\":$(wc -c < "$file" 2>/dev/null || echo 0)"
+
   return 0
 }
 
@@ -103,6 +115,10 @@ memory_read() {
     echo "ERROR: Failed to read file: $file" >&2
     return 1
   }
+
+  # Log successful read
+  log_memory_operation "read" "$file" "\"size\":$(wc -c < "$file" 2>/dev/null || echo 0)"
+
   return 0
 }
 
@@ -146,6 +162,9 @@ memory_update_json() {
     rm -f "$tmp"
     return 1
   }
+
+  # Log successful update
+  log_memory_operation "update" "$file" "\"expression\":\"${jq_expression:0:50}...\",\"size\":$(wc -c < "$file" 2>/dev/null || echo 0)"
 
   return 0
 }

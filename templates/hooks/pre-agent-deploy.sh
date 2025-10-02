@@ -6,6 +6,11 @@ set -euo pipefail
 
 MEMORY_DIR=".claude/memory"
 TASKS_INDEX="$MEMORY_DIR/task-index.json"
+LIB_DIR="$MEMORY_DIR/lib"
+
+# Source logging library
+# shellcheck disable=SC1091
+source "$LIB_DIR/logging.sh" 2>/dev/null || true
 
 # If no index exists, allow everything
 if [[ ! -f "$TASKS_INDEX" ]]; then
@@ -32,6 +37,8 @@ fi
 
 # Check if task exists in index
 if ! jq -e ".tasks[] | select(.id==\"$TASK_ID\")" "$TASKS_INDEX" >/dev/null 2>&1; then
+  log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Task not found in index" '{"taskExists":false}'
+
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Task $TASK_ID not found in index"}}
 JSON
@@ -42,6 +49,8 @@ fi
 CHILDREN=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | (.children // [])[]" "$TASKS_INDEX" 2>/dev/null || echo "")
 
 if [[ -n "$CHILDREN" ]]; then
+  log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Task has children: $CHILDREN" "{\"isLeaf\":false,\"children\":\"$CHILDREN\"}"
+
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Cannot work on $TASK_ID - has children. Work on leaf tasks only: $CHILDREN"}}
 JSON
@@ -67,6 +76,8 @@ if [[ -n "$DEPS" ]]; then
   done <<< "$DEPS"
 
   if [[ "$ALL_DONE" != true ]]; then
+    log_hook_event "PreToolUse" "Task" "$TASK_ID" "deny" "Dependencies not satisfied:$FAILED_DEPS" "{\"depsSatisfied\":false,\"failedDeps\":\"$FAILED_DEPS\"}"
+
     cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Task $TASK_ID blocked - dependencies not satisfied:$FAILED_DEPS"}}
 JSON
@@ -75,4 +86,6 @@ JSON
 fi
 
 # All checks passed - allow
+log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "Leaf task, dependencies satisfied" '{"isLeaf":true,"depsSatisfied":true}'
+
 exit 0
