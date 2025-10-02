@@ -49,15 +49,17 @@ block_command() {
 
     log "BLOCKED: $reason - Command: $command"
 
-    # Output hookSpecificOutput JSON for PreToolUse decision control
+    # Output hookSpecificOutput JSON to stderr (Claude Code reads stderr when exit code is non-zero)
     echo "{
         \"hookSpecificOutput\": {
             \"hookEventName\": \"PreToolUse\",
             \"permissionDecision\": \"deny\",
             \"permissionDecisionReason\": \"🚫 BLOCKED: $reason\\n\\nCommand: $command\\n\\nUse manual approval or sandbox environment for dangerous operations\"
         }
-    }"
-    exit 0
+    }" >&2
+
+    # Exit code 2 = BLOCK execution (exit 0 would allow it!)
+    exit 2
 }
 
 # Check for filesystem destruction patterns
