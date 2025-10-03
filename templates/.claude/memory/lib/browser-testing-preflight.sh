@@ -4,11 +4,21 @@
 
 set -euo pipefail
 
+# Source logging library
+LIB_DIR="$(dirname "$0")"
+# shellcheck disable=SC1091
+source "$LIB_DIR/logging.sh" 2>/dev/null || true
+
 # Get user request from argument
 USER_REQUEST="${1:-}"
 
 if [ -z "$USER_REQUEST" ]; then
   exit 0  # No request provided, skip
+fi
+
+# Log that preflight is starting
+if command -v log_event &>/dev/null; then
+  log_event "preflight" "start" "Browser testing preflight check started" "{\"userRequest\":\"$USER_REQUEST\"}"
 fi
 
 # UI/Browser keywords (deterministic detection)
@@ -91,5 +101,10 @@ fi
 
 # Create marker file to indicate preflight check completed
 touch .claude/memory/.preflight-done
+
+# Log completion
+if command -v log_event &>/dev/null; then
+  log_event "preflight" "completed" "Browser testing preflight check completed" "{\"uiDetected\":$ui_detected,\"browserTestingEnabled\":$browser_testing_enabled}"
+fi
 
 exit 0
