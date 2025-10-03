@@ -115,6 +115,78 @@ Analysis:
 
 ---
 
+### Step 2.5: Preflight Check - Browser Testing Configuration
+
+**🌐 CRITICAL: Check for UI/Browser Requirements (Runs Before Task Creation)**
+
+**Browser Testing is ENABLED by default for UI projects.**
+
+**Detection Logic**:
+```javascript
+const browserKeywords = [
+  // UI Frameworks
+  'html', 'css', 'react', 'vue', 'svelte', 'angular', 'nextjs', 'remix',
+  // UI Elements
+  'form', 'button', 'input', 'component', 'modal', 'dropdown', 'menu',
+  // UI Concepts
+  'ui', 'interface', 'dashboard', 'page', 'layout', 'responsive',
+  // User Actions
+  'login', 'signup', 'authentication', 'interactive', 'click', 'submit',
+  // Styling
+  'tailwind', 'styled-components', 'sass', 'bootstrap', 'material-ui'
+];
+
+const request = userInput.toLowerCase();
+const hasUI = browserKeywords.some(keyword => request.includes(keyword));
+```
+
+**IF UI/Browser Detected**:
+
+```
+🌐 Browser UI Detected
+
+✅ Automated browser testing is ENABLED (default)
+   → Chrome DevTools validation after implementation
+   → Verifies CSS loads correctly
+   → Tests user interactions (clicks, forms)
+   → Validates visual appearance
+   → Adds ~30-60s per UI task
+
+📋 What gets validated:
+   • CSS files load in browser
+   • Styles apply correctly
+   • Form interactions work
+   • DOM updates as expected
+   • No JavaScript errors
+
+⚙️  To DISABLE browser testing:
+   echo '{"browserTesting": false}' > .claude/memory/config.json
+
+   Or create .claude/memory/config.json:
+   {
+     "browserTesting": false,
+     "cssValidation": false
+   }
+```
+
+**Config File Check**:
+```bash
+# Check if user has disabled browser testing
+if [ -f ".claude/memory/config.json" ]; then
+  browser_testing=$(jq -r '.browserTesting // true' .claude/memory/config.json)
+else
+  browser_testing=true  # Default: ENABLED
+fi
+```
+
+**NO UI Detected** (backend, CLI, library):
+```
+No browser UI detected - browser testing not required.
+Proceeding with standard TDD workflow (unit tests only).
+```
+
+---
+
 ### Step 3: Determine Features (Deterministic Rules)
 
 **Feature Breakdown Rules**:

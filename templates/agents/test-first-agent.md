@@ -179,6 +179,73 @@ Deploy @component-implementation-agent to create LoginForm.js that makes these t
 - **Zero Implementation**: Never write production code
 - **Single Responsibility**: ONLY test creation, nothing else
 
+---
+
+### **🎨 CSS VALIDATION TESTS (Required for UI Components)**
+
+**When writing tests for UI components, ALWAYS include CSS validation tests.**
+
+**Why**: CSS issues are common and hard to detect without browser testing. These tests catch:
+- ❌ CSS files not imported
+- ❌ CSS not loaded in browser
+- ❌ Styles not applied correctly
+
+**CSS Test Pattern (ALWAYS include for UI components):**
+
+```javascript
+import fs from 'fs';
+import { render, screen } from '@testing-library/react';
+import { TodoApp } from './TodoApp';
+
+describe('TodoApp CSS Validation', () => {
+  test('should import CSS file', () => {
+    // Verify component file imports CSS
+    const componentSource = fs.readFileSync('./src/components/TodoApp.tsx', 'utf8');
+    expect(componentSource).toContain("import './TodoApp.css'");
+  });
+
+  test('should have CSS file at expected path', () => {
+    // Verify CSS file exists
+    expect(fs.existsSync('./src/components/TodoApp.css')).toBe(true);
+  });
+
+  test('should apply basic CSS styles', () => {
+    // Verify styles are applied (basic check)
+    render(<TodoApp />);
+    const container = screen.getByTestId('todo-app');
+    const styles = window.getComputedStyle(container);
+
+    // Check key styles are applied (proves CSS loaded)
+    expect(styles.maxWidth).toBe('600px');
+    expect(styles.fontFamily).toContain('sans-serif');
+  });
+});
+```
+
+**For HTML/Vanilla JS Projects:**
+
+```javascript
+describe('Login Form CSS Validation', () => {
+  test('should include CSS link in HTML', () => {
+    const html = fs.readFileSync('./login.html', 'utf8');
+    expect(html).toMatch(/<link[^>]+href=["'].*\.css["']/);
+  });
+
+  test('should have styles.css file', () => {
+    expect(fs.existsSync('./styles.css')).toBe(true);
+  });
+});
+```
+
+**CSS Validation Checklist:**
+1. ✅ CSS file exists at path
+2. ✅ Component imports CSS file
+3. ✅ Basic computed styles apply (if jsdom supports it)
+
+**Note**: Full CSS validation (visual appearance) happens in browser via `chrome-devtools-testing-agent` when browser testing is enabled.
+
+---
+
 ### **🔧 SUPPORTED TEST FRAMEWORKS**
 
 - **Jest**: React/Node.js testing

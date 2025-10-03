@@ -16,6 +16,89 @@ The collective uses a deterministic, file-based task management system that repl
 - ✅ **Hook-enforced**: Workflow validation via PreToolUse and SubagentStop hooks
 - ✅ **Test-first**: Tests always created before implementation
 - ✅ **3-tier hierarchy**: Epic → Features → Tasks (consistent structure)
+- ✅ **Browser testing**: ON by default for UI projects (opt-out available)
+
+---
+
+## Browser Testing Configuration
+
+### Overview
+
+**Browser testing is ENABLED by default** for UI/browser-based projects.
+
+When enabled, the system automatically:
+- Validates CSS files load correctly in browser
+- Tests user interactions (clicks, form submissions, navigation)
+- Verifies DOM state changes as expected
+- Takes screenshots for visual validation
+- Checks for JavaScript errors in console
+
+**Performance Impact**: Adds ~30-60 seconds per UI task
+
+---
+
+### When Browser Testing Runs
+
+**Automatic Trigger** when these keywords detected:
+- UI frameworks: `html`, `css`, `react`, `vue`, `svelte`, `angular`, `nextjs`
+- UI elements: `form`, `button`, `input`, `component`, `modal`, `dropdown`
+- UI concepts: `ui`, `interface`, `dashboard`, `page`, `layout`, `responsive`
+- User actions: `login`, `signup`, `authentication`, `interactive`
+
+**Workflow**:
+```
+1. task-breakdown-agent detects UI → shows browser testing notification
+2. component-implementation-agent completes → suggests tdd-validation-agent
+3. tdd-validation-agent scans code for UI → suggests chrome-devtools-testing-agent
+4. chrome-devtools-testing-agent validates in browser → verifies CSS + interactions
+```
+
+---
+
+### How to Disable Browser Testing
+
+**Create config file** before starting workflow:
+
+```bash
+# Create .claude/memory/config.json
+cat > .claude/memory/config.json <<'EOF'
+{
+  "browserTesting": false,
+  "cssValidation": false
+}
+EOF
+```
+
+**Or use echo**:
+```bash
+echo '{"browserTesting": false}' > .claude/memory/config.json
+```
+
+**Config Options**:
+```json
+{
+  "browserTesting": true,     // Enable/disable browser validation (default: true)
+  "cssValidation": true,       // Enable/disable CSS-specific checks (default: true)
+  "visualTesting": false,      // Enable/disable screenshot comparison (future)
+  "screenshotOnFailure": true  // Capture screenshots when tests fail (default: true)
+}
+```
+
+---
+
+### When to Disable Browser Testing
+
+**Disable for**:
+- Backend APIs (no UI)
+- CLI tools (terminal-based)
+- Libraries/SDKs (no browser dependency)
+- Quick prototypes (fast iteration)
+
+**Keep enabled for**:
+- React/Vue/Svelte applications (UI components)
+- HTML/CSS/JavaScript projects (browser-based)
+- Forms, dashboards, interactive UIs
+- Production-ready applications
 
 ---
 
