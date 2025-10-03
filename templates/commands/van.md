@@ -22,20 +22,41 @@ When user provides a request, you automatically execute this workflow combining 
 
 ### STEP 0: Preflight Configuration (FIRST TIME ONLY)
 
-**Run this script BEFORE anything else:**
+**Check if `.claude/memory/.preflight-done` exists. If YES, skip this step entirely.**
+
+**If NO, ask the user these questions conversationally (ONE at a time):**
+
+1. **Question 1:** "📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research. (y/n)"
+   - Wait for user response
+   - User will respond with "y" or "n"
+
+2. **Question 2:** "🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps. (y/n)"
+   - Wait for user response
+   - User will respond with "y" or "n"
+
+**After receiving both answers:**
+1. Save config using Bash tool:
 ```bash
-bash .claude/memory/lib/browser-testing-preflight.sh
+mkdir -p .claude/memory
+cat > .claude/memory/config.json <<EOF
+{
+  "browserTesting": true_or_false,
+  "loggingEnabled": true_or_false
+}
+EOF
 ```
 
-This asks the user:
-1. Enable logging? (y/n)
-2. Enable browser testing? (y/n)
+2. If logging enabled, create toggle file:
+```bash
+touch .claude/memory/.logging-enabled
+```
 
-Creates:
-- `.claude/memory/config.json` with user's choices
-- `.claude/memory/.preflight-done` marker (so we don't ask again)
+3. Create marker file so this only runs once:
+```bash
+touch .claude/memory/.preflight-done
+```
 
-**If marker exists, skip this step.**
+4. Confirm to user: "✅ Configuration saved. Logging: [ENABLED/DISABLED], Browser Testing: [ENABLED/DISABLED]"
 
 ---
 
