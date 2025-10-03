@@ -27,52 +27,6 @@ if [ -f "$config_file" ]; then
   fi
   echo ""
 else
-  # Interactive menu function with arrow key navigation
-  menu_select() {
-    local prompt="$1"
-    local selected=0
-    local options=("Enable" "Disable")
-
-    while true; do
-      # Clear previous menu
-      tput cuu 3 2>/dev/null || true
-      tput el 2>/dev/null || true
-
-      # Display options
-      for i in "${!options[@]}"; do
-        if [ $i -eq $selected ]; then
-          echo "  ● ${options[$i]}"
-        else
-          echo "  ○ ${options[$i]}"
-        fi
-      done
-      echo ""
-      echo "$prompt"
-
-      # Read arrow keys
-      read -rsn1 key
-      case "$key" in
-        $'\x1b')
-          read -rsn2 key
-          case "$key" in
-            '[A') # Up arrow
-              ((selected--))
-              [ $selected -lt 0 ] && selected=$((${#options[@]} - 1))
-              ;;
-            '[B') # Down arrow
-              ((selected++))
-              [ $selected -ge ${#options[@]} ] && selected=0
-              ;;
-          esac
-          ;;
-        '') # Enter key
-          [ $selected -eq 0 ] && echo "y" || echo "n"
-          return
-          ;;
-      esac
-    done
-  }
-
   # First time - ask user
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
@@ -90,12 +44,9 @@ else
   echo ""
   echo "Useful for: Debugging, research, understanding workflow"
   echo ""
-  echo "  ● Enable"
-  echo "  ○ Disable"
+  read -p "Enable logging? [Y/n]: " -n 1 -r
   echo ""
-  echo "Use ↑↓ arrows to select, press Enter to confirm"
-
-  LOGGING_ENABLED=$(menu_select "Use ↑↓ arrows to select, press Enter to confirm")
+  LOGGING_ENABLED=${REPLY:-y}
   echo ""
 
   # Question 2: Browser Testing
@@ -112,12 +63,9 @@ else
   echo "Best for: Web apps, UI components, dashboards"
   echo "Skip for: Backend APIs, CLI tools, libraries"
   echo ""
-  echo "  ● Enable"
-  echo "  ○ Disable"
+  read -p "Enable browser testing? [Y/n]: " -n 1 -r
   echo ""
-  echo "Use ↑↓ arrows to select, press Enter to confirm"
-
-  BROWSER_TESTING_ENABLED=$(menu_select "Use ↑↓ arrows to select, press Enter to confirm")
+  BROWSER_TESTING_ENABLED=${REPLY:-y}
   echo ""
 
   # Save choices to config
