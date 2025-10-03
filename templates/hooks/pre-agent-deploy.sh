@@ -16,6 +16,25 @@ source "$LIB_DIR/logging.sh" 2>/dev/null || true
 TOOL_INPUT=$(cat)
 TOOL_NAME=$(echo "$TOOL_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 
+# PREFLIGHT CHECK: Ensure browser testing preflight has run before task breakdown
+if [[ "$TOOL_NAME" == "Task" ]]; then
+  PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
+
+  # Check if deploying task-breakdown-agent (first agent in workflow)
+  if echo "$PROMPT" | grep -iq "task-breakdown-agent"; then
+    PREFLIGHT_MARKER="$MEMORY_DIR/.preflight-done"
+
+    if [[ ! -f "$PREFLIGHT_MARKER" ]]; then
+      log_hook_event "PreToolUse" "Task" "task-breakdown-agent" "deny" "Preflight check required before task breakdown" '{"preflightCompleted":false}'
+
+      cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"🌐 Browser testing preflight check required.\n\nRun this first:\nbash .claude/memory/lib/browser-testing-preflight.sh \"USER_REQUEST\"\n\nThis shows browser testing configuration and creates required marker file."}}
+JSON
+      exit 2
+    fi
+  fi
+fi
+
 # If no index exists, allow everything (LOG this decision)
 if [[ ! -f "$TASKS_INDEX" ]]; then
   log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "No task index - allowing all operations" '{"taskIndexExists":false}'

@@ -20,37 +20,41 @@ When user provides a request, you automatically execute this workflow combining 
 
 ## AUTOMATIC WORKFLOW
 
-### STEP 0: Browser Testing Preflight Check (DETERMINISTIC)
+### STEP 0: Browser Testing Preflight Check (MANDATORY)
 
-**BEFORE creating tasks, run preflight script:**
+**Run preflight script FIRST - hook enforces this:**
 
 ```bash
-# Run browser testing preflight notification
 bash .claude/memory/lib/browser-testing-preflight.sh "USER_REQUEST_HERE"
 ```
 
-This script:
-- ✅ Detects UI keywords (html, css, react, form, button, etc.)
-- ✅ Shows browser testing notification (ENABLED by default)
-- ✅ Checks for opt-out config (.claude/memory/config.json)
-- ✅ Runs deterministically (always executes, no instructions needed)
+**Why mandatory:**
+- Creates `.claude/memory/.preflight-done` marker file
+- PreToolUse hook BLOCKS task-breakdown-agent deployment without this file
+- If you skip this, hook will DENY with error message
 
-**Output when UI detected:**
-```
-🌐 Browser UI Detected
-✅ Automated browser testing: ENABLED (default)
-   → Validates CSS loads correctly
-   ...
-⚙️  To DISABLE: echo '{"browserTesting": false}' > .claude/memory/config.json
+**What it does:**
+- Detects UI keywords (html, css, react, form, button, etc.)
+- Shows browser testing notification if UI detected
+- Creates marker file to unlock task-breakdown-agent
+
+**Example:**
+```bash
+bash .claude/memory/lib/browser-testing-preflight.sh "build a todo app with react"
+
+# Output:
+# 🌐 Browser UI Detected
+# ✅ Automated browser testing: ENABLED (default)
+# ...
 ```
 
 ---
 
 ### STEP 1: Create Task Hierarchy with Task Breakdown Agent
 
-**Deploy task-breakdown-agent to create task hierarchy:**
+**After preflight completes, deploy task-breakdown-agent:**
 
-Use Task tool to deploy task-breakdown-agent with user request. Agent will create `.claude/memory/task-index.json` deterministically.
+Use Task tool to deploy task-breakdown-agent with user request. Hook verifies `.preflight-done` exists before allowing deployment.
 
 **CRITICAL: For each implementation task, create TWO subtasks:**
 1. Test task (deploys @test-first-agent)

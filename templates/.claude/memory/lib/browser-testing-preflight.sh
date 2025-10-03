@@ -89,4 +89,7 @@ else
   echo ""
 fi
 
+# Create marker file to indicate preflight check completed
+touch .claude/memory/.preflight-done
+
 exit 0
