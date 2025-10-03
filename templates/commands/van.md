@@ -20,41 +20,9 @@ When user provides a request, you automatically execute this workflow combining 
 
 ## AUTOMATIC WORKFLOW
 
-### STEP 0: Browser Testing Preflight Check (MANDATORY)
+### STEP 1: Create Task Hierarchy with TDD Structure
 
-**Run preflight script FIRST - hook enforces this:**
-
-```bash
-bash .claude/memory/lib/browser-testing-preflight.sh "USER_REQUEST_HERE"
-```
-
-**Why mandatory:**
-- Creates `.claude/memory/.preflight-done` marker file
-- PreToolUse hook BLOCKS task-breakdown-agent deployment without this file
-- If you skip this, hook will DENY with error message
-
-**What it does:**
-- Detects UI keywords (html, css, react, form, button, etc.)
-- Shows browser testing notification if UI detected
-- Creates marker file to unlock task-breakdown-agent
-
-**Example:**
-```bash
-bash .claude/memory/lib/browser-testing-preflight.sh "build a todo app with react"
-
-# Output:
-# 🌐 Browser UI Detected
-# ✅ Automated browser testing: ENABLED (default)
-# ...
-```
-
----
-
-### STEP 1: Create Task Hierarchy with Task Breakdown Agent
-
-**After preflight completes, deploy task-breakdown-agent:**
-
-Use Task tool to deploy task-breakdown-agent with user request. Hook verifies `.preflight-done` exists before allowing deployment.
+Parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
 
 **CRITICAL: For each implementation task, create TWO subtasks:**
 1. Test task (deploys @test-first-agent)
