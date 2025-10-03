@@ -16,29 +16,6 @@ source "$LIB_DIR/logging.sh" 2>/dev/null || true
 TOOL_INPUT=$(cat)
 TOOL_NAME=$(echo "$TOOL_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 
-# PREFLIGHT CHECK: Run browser testing preflight BEFORE task breakdown (DETERMINISTIC)
-if [[ "$TOOL_NAME" == "Task" ]]; then
-  PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
-
-  # Check if deploying task-breakdown-agent (first agent in workflow)
-  if echo "$PROMPT" | grep -iq "task-breakdown-agent"; then
-    PREFLIGHT_MARKER="$MEMORY_DIR/.preflight-done"
-
-    # If marker doesn't exist, RUN THE PREFLIGHT SCRIPT (deterministic)
-    if [[ ! -f "$PREFLIGHT_MARKER" ]]; then
-      log_hook_event "PreToolUse" "Task" "task-breakdown-agent" "auto-run" "Running browser testing preflight automatically" '{"preflightAutoRun":true}'
-
-      # Extract user request from prompt for preflight script
-      USER_REQUEST=$(echo "$PROMPT" | sed -n 's/.*task-breakdown-agent.*"\(.*\)".*/\1/p' | head -1)
-
-      # RUN PREFLIGHT SCRIPT (hook executes it)
-      bash "$LIB_DIR/browser-testing-preflight.sh" "$USER_REQUEST" >&2
-
-      log_hook_event "PreToolUse" "Task" "task-breakdown-agent" "allow" "Preflight completed, allowing task breakdown" '{"preflightCompleted":true}'
-    fi
-  fi
-fi
-
 # If no index exists, allow everything (LOG this decision)
 if [[ ! -f "$TASKS_INDEX" ]]; then
   log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "No task index - allowing all operations" '{"taskIndexExists":false}'
