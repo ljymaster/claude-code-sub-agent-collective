@@ -20,9 +20,37 @@ When user provides a request, you automatically execute this workflow combining 
 
 ## AUTOMATIC WORKFLOW
 
-### STEP 1: Create Task Hierarchy with TDD Structure
+### STEP 0: Browser Testing Preflight Check (DETERMINISTIC)
 
-Parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
+**BEFORE creating tasks, run preflight script:**
+
+```bash
+# Run browser testing preflight notification
+bash .claude/memory/lib/browser-testing-preflight.sh "USER_REQUEST_HERE"
+```
+
+This script:
+- ✅ Detects UI keywords (html, css, react, form, button, etc.)
+- ✅ Shows browser testing notification (ENABLED by default)
+- ✅ Checks for opt-out config (.claude/memory/config.json)
+- ✅ Runs deterministically (always executes, no instructions needed)
+
+**Output when UI detected:**
+```
+🌐 Browser UI Detected
+✅ Automated browser testing: ENABLED (default)
+   → Validates CSS loads correctly
+   ...
+⚙️  To DISABLE: echo '{"browserTesting": false}' > .claude/memory/config.json
+```
+
+---
+
+### STEP 1: Create Task Hierarchy with Task Breakdown Agent
+
+**Deploy task-breakdown-agent to create task hierarchy:**
+
+Use Task tool to deploy task-breakdown-agent with user request. Agent will create `.claude/memory/task-index.json` deterministically.
 
 **CRITICAL: For each implementation task, create TWO subtasks:**
 1. Test task (deploys @test-first-agent)
