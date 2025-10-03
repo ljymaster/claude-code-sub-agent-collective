@@ -22,7 +22,7 @@ When user provides a request, you automatically execute this workflow combining 
 
 ### STEP 1: Create Task Hierarchy with TDD Structure
 
-Parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
+Deploy `@task-breakdown-agent` to parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
 
 **CRITICAL: For each implementation task, create TWO subtasks:**
 1. Test task (deploys @test-first-agent)
