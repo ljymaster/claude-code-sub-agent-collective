@@ -24,39 +24,44 @@ When user provides a request, you automatically execute this workflow combining 
 
 **Check if `.claude/memory/.preflight-done` exists. If YES, skip this step entirely.**
 
-**If NO, ask the user these questions conversationally (ONE at a time):**
+**If NO, conduct this interactive configuration (like spec-kit /clarify pattern):**
 
-1. **Question 1:** "📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research. (y/n)"
-   - Wait for user response
-   - User will respond with "y" or "n"
+**Question 1:**
+Ask: "📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research. (y/n)"
 
-2. **Question 2:** "🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps. (y/n)"
-   - Wait for user response
-   - User will respond with "y" or "n"
+Wait for user response (they will reply "y" or "n")
 
-**After receiving both answers:**
-1. Save config using Bash tool:
+**ACTION the response immediately:**
 ```bash
 mkdir -p .claude/memory
-cat > .claude/memory/config.json <<EOF
-{
-  "browserTesting": true_or_false,
-  "loggingEnabled": true_or_false
-}
-EOF
+if [[ response == y ]]; then
+  echo '{"loggingEnabled": true}' > .claude/memory/config.json
+  touch .claude/memory/.logging-enabled
+else
+  echo '{"loggingEnabled": false}' > .claude/memory/config.json
+fi
 ```
 
-2. If logging enabled, create toggle file:
+**Question 2:**
+Ask: "🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps. (y/n)"
+
+Wait for user response (they will reply "y" or "n")
+
+**ACTION the response immediately:**
 ```bash
-touch .claude/memory/.logging-enabled
+# Read existing config and add browserTesting
+jq --arg bt "$([ response == y ] && echo true || echo false)" \
+  '. + {browserTesting: ($bt == "true")}' \
+  .claude/memory/config.json > .claude/memory/config.json.tmp
+mv .claude/memory/config.json.tmp .claude/memory/config.json
 ```
 
-3. Create marker file so this only runs once:
+**Complete configuration:**
 ```bash
 touch .claude/memory/.preflight-done
 ```
 
-4. Confirm to user: "✅ Configuration saved. Logging: [ENABLED/DISABLED], Browser Testing: [ENABLED/DISABLED]"
+Report: "✅ Configuration saved. Ready to proceed."
 
 ---
 
