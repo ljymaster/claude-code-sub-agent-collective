@@ -20,6 +20,24 @@ When user provides a request, you automatically execute this workflow combining 
 
 ## AUTOMATIC WORKFLOW
 
+### STEP 0: Preflight Configuration (FIRST TIME ONLY)
+
+**Run this script BEFORE anything else:**
+```bash
+bash .claude/memory/lib/browser-testing-preflight.sh
+```
+
+This asks the user:
+1. Enable browser testing? (y/n)
+
+Creates:
+- `.claude/memory/config.json` with user's choices
+- `.claude/memory/.preflight-done` marker (so we don't ask again)
+
+**If marker exists, skip this step.**
+
+---
+
 ### STEP 1: Create Task Hierarchy with TDD Structure
 
 Deploy `@task-breakdown-agent` to parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
