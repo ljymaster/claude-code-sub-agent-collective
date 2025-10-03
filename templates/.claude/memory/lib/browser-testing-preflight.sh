@@ -1,6 +1,6 @@
 #!/bin/bash
-# browser-testing-preflight.sh - Deterministic browser testing notification
-# Called BEFORE task breakdown to notify user of browser testing configuration
+# browser-testing-preflight.sh - Simple browser testing setup prompt
+# Called BEFORE task breakdown to ask user about browser testing
 
 set -euo pipefail
 
@@ -9,89 +9,58 @@ LIB_DIR="$(dirname "$0")"
 # shellcheck disable=SC1091
 source "$LIB_DIR/logging.sh" 2>/dev/null || true
 
-# Get user request from argument (optional - used for UI detection)
-USER_REQUEST="${1:-}"
-
 # Log that preflight is starting
 if command -v log_event &>/dev/null; then
-  log_event "preflight" "start" "Browser testing preflight check started" "{\"userRequest\":\"$USER_REQUEST\"}"
+  log_event "preflight" "start" "Browser testing preflight check started" "{}"
 fi
 
-# UI/Browser keywords (deterministic detection)
-UI_KEYWORDS=(
-  # UI Frameworks
-  "html" "css" "react" "vue" "svelte" "angular" "nextjs" "remix"
-  # UI Elements
-  "form" "button" "input" "component" "modal" "dropdown" "menu"
-  # UI Concepts
-  "ui" "interface" "dashboard" "page" "layout" "responsive"
-  # User Actions
-  "login" "signup" "authentication" "interactive" "click" "submit"
-  # Styling
-  "tailwind" "styled-components" "sass" "bootstrap" "material-ui"
-)
-
-# Convert request to lowercase for case-insensitive matching
-request_lower=$(echo "$USER_REQUEST" | tr '[:upper:]' '[:lower:]')
-
-# Check if any UI keyword is present
-ui_detected=false
-for keyword in "${UI_KEYWORDS[@]}"; do
-  if echo "$request_lower" | grep -q "$keyword"; then
-    ui_detected=true
-    break
-  fi
-done
-
-# Check if user has disabled browser testing
+# Check if config already exists (user already answered)
 config_file=".claude/memory/config.json"
-browser_testing_enabled=true
-
 if [ -f "$config_file" ]; then
-  # Check if browserTesting is explicitly set to false
   browser_testing=$(jq -r '.browserTesting // true' "$config_file" 2>/dev/null || echo "true")
-  if [ "$browser_testing" = "false" ]; then
-    browser_testing_enabled=false
-  fi
-fi
 
-# Show notification if UI detected
-if [ "$ui_detected" = true ]; then
   echo ""
-  echo "🌐 Browser UI Detected"
-  echo ""
-
-  if [ "$browser_testing_enabled" = true ]; then
-    echo "✅ Automated browser testing: ENABLED (default)"
-    echo "   → Validates CSS loads correctly"
-    echo "   → Tests user interactions (clicks, forms)"
-    echo "   → Verifies DOM state changes"
-    echo "   → Performance impact: ~30-60s per UI task"
-    echo ""
-    echo "📋 What gets validated:"
-    echo "   • CSS files load in browser"
-    echo "   • Styles apply correctly"
-    echo "   • Form interactions work"
-    echo "   • DOM updates as expected"
-    echo "   • No JavaScript errors"
-    echo ""
-    echo "⚙️  To DISABLE browser testing:"
-    echo "   echo '{\"browserTesting\": false}' > .claude/memory/config.json"
+  if [ "$browser_testing" = "true" ]; then
+    echo "✅ Browser testing: ENABLED (from previous session)"
   else
-    echo "⚠️  Automated browser testing: DISABLED (via config)"
-    echo "   → Only unit/integration tests will run"
-    echo "   → CSS and UI interactions not validated in browser"
-    echo ""
-    echo "⚙️  To RE-ENABLE browser testing:"
-    echo "   rm .claude/memory/config.json"
-    echo "   # Or set browserTesting: true in config"
+    echo "⚠️  Browser testing: DISABLED (from previous session)"
   fi
   echo ""
 else
-  # No UI detected - backend/CLI/library project
+  # First time - ask user
   echo ""
-  echo "ℹ️  No browser UI detected - browser testing not required"
-  echo "   Proceeding with standard TDD workflow (unit tests only)"
+  echo "╔════════════════════════════════════════════════════════╗"
+  echo "║        🌐 Browser Testing Setup                        ║"
+  echo "╚════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "Enable automated browser testing with Chrome DevTools?"
+  echo ""
+  echo "What it does:"
+  echo "  • Validates CSS files load correctly in browser"
+  echo "  • Tests user interactions (clicks, form fills)"
+  echo "  • Verifies DOM state changes"
+  echo "  • Takes screenshots for validation"
+  echo "  • Checks for JavaScript errors"
+  echo ""
+  echo "Performance impact: ~30-60 seconds per UI task"
+  echo ""
+  echo "Recommended for: Web apps, UI components, dashboards"
+  echo "Skip for: Backend APIs, CLI tools, libraries"
+  echo ""
+
+  read -p "Enable browser testing? (y/n): " -n 1 -r
+  echo ""
+  echo ""
+
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo '{"browserTesting": true}' > "$config_file"
+    echo "✅ Browser testing ENABLED"
+    echo "   Chrome DevTools validation will run after implementation tasks"
+  else
+    echo '{"browserTesting": false}' > "$config_file"
+    echo "⚠️  Browser testing DISABLED"
+    echo "   Only unit tests will run (no browser validation)"
+  fi
   echo ""
 fi
 
