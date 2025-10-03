@@ -28,7 +28,8 @@ bash .claude/memory/lib/browser-testing-preflight.sh
 ```
 
 This asks the user:
-1. Enable browser testing? (y/n)
+1. Enable logging? (y/n)
+2. Enable browser testing? (y/n)
 
 Creates:
 - `.claude/memory/config.json` with user's choices

@@ -30,36 +30,63 @@ else
   # First time - ask user
   echo ""
   echo "╔════════════════════════════════════════════════════════╗"
-  echo "║        🌐 Browser Testing Setup                        ║"
+  echo "║        ⚙️  Workflow Configuration                      ║"
   echo "╚════════════════════════════════════════════════════════╝"
   echo ""
-  echo "Enable automated browser testing with Chrome DevTools?"
+
+  # Question 1: Logging
+  echo "1️⃣  Enable deterministic logging?"
   echo ""
-  echo "What it does:"
-  echo "  • Validates CSS files load correctly in browser"
-  echo "  • Tests user interactions (clicks, form fills)"
-  echo "  • Verifies DOM state changes"
-  echo "  • Takes screenshots for validation"
-  echo "  • Checks for JavaScript errors"
+  echo "   Logs all hook decisions and memory operations to:"
+  echo "   • .claude/memory/logs/current/hooks.jsonl"
+  echo "   • .claude/memory/logs/current/memory.jsonl"
   echo ""
-  echo "Performance impact: ~30-60 seconds per UI task"
+  read -p "   Enable logging? (y/n): " -n 1 -r
   echo ""
-  echo "Recommended for: Web apps, UI components, dashboards"
-  echo "Skip for: Backend APIs, CLI tools, libraries"
+  LOGGING_ENABLED=$REPLY
   echo ""
 
-  read -p "Enable browser testing? (y/n): " -n 1 -r
+  # Question 2: Browser Testing
+  echo "2️⃣  Enable automated browser testing with Chrome DevTools?"
   echo ""
+  echo "   What it does:"
+  echo "   • Validates CSS files load correctly in browser"
+  echo "   • Tests user interactions (clicks, form fills)"
+  echo "   • Verifies DOM state changes"
+  echo "   • Takes screenshots for validation"
+  echo "   • Checks for JavaScript errors"
+  echo ""
+  echo "   Performance impact: ~30-60 seconds per UI task"
+  echo ""
+  echo "   Recommended for: Web apps, UI components, dashboards"
+  echo "   Skip for: Backend APIs, CLI tools, libraries"
+  echo ""
+  read -p "   Enable browser testing? (y/n): " -n 1 -r
+  echo ""
+  BROWSER_TESTING_ENABLED=$REPLY
   echo ""
 
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  # Save choices to config
+  if [[ $BROWSER_TESTING_ENABLED =~ ^[Yy]$ ]]; then
     echo '{"browserTesting": true}' > "$config_file"
-    echo "✅ Browser testing ENABLED"
-    echo "   Chrome DevTools validation will run after implementation tasks"
   else
     echo '{"browserTesting": false}' > "$config_file"
+  fi
+
+  # Enable/disable logging
+  if [[ $LOGGING_ENABLED =~ ^[Yy]$ ]]; then
+    touch .claude/memory/.logging-enabled
+    echo "✅ Logging ENABLED"
+  else
+    rm -f .claude/memory/.logging-enabled
+    echo "⚠️  Logging DISABLED"
+  fi
+
+  # Show browser testing status
+  if [[ $BROWSER_TESTING_ENABLED =~ ^[Yy]$ ]]; then
+    echo "✅ Browser testing ENABLED"
+  else
     echo "⚠️  Browser testing DISABLED"
-    echo "   Only unit tests will run (no browser validation)"
   fi
   echo ""
 fi
