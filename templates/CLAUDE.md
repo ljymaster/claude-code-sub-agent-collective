@@ -2,9 +2,9 @@
 **Import minimal routing and auto-delegation decisions only, treat as if import is in the main CLAUDE.md file.**
 @./.claude-collective/DECISION.md
 
-## Task Master AI Instructions
-**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
-@./.taskmaster/CLAUDE.md
+## Memory-Based Task System
+**Import task breakdown methodology and execution workflow, treat as if import is in the main CLAUDE.md file.**
+@./.claude-collective/task-system.md
 
 ## Deterministic Logging System
 
