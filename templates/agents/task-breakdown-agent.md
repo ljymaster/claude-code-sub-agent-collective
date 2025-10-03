@@ -203,16 +203,126 @@ Proceeding with standard TDD workflow (unit tests only).
 4. Additional functionality
 5. Polish/edge cases
 
-**Complex Request** (7 features):
-1. Core structure
-2. Styling
-3. Main feature A
-4. Main feature B
-5. Main feature C
-6. Integration/connections
-7. Polish/optimization
+**Complex Request** (7-8 features):
+1. Core structure (Project setup, initial App.tsx)
+2. Data model/state management
+3. Main feature A (e.g., CRUD operations)
+4. Main feature B (e.g., Filtering)
+5. Main feature C (e.g., Search)
+6. Supporting feature (e.g., localStorage persistence)
+7. Styling/responsive design
+8. **Application Integration** (REQUIRED for component-based apps - wires everything together)
 
 **PRD-Based**: Use features from parsed PRD (typically 4-7).
+
+---
+
+### 🚨 CRITICAL: Component-Based Apps REQUIRE Integration Feature
+
+**If the project uses React, Vue, Svelte, or creates multiple components:**
+
+**MANDATORY FINAL FEATURE - Application Integration:**
+
+```json
+{
+  "id": "1.N",
+  "type": "feature",
+  "title": "Application Integration",
+  "dependencies": ["<all-component-features>"],
+  "children": ["1.N.1", "1.N.2"]
+}
+```
+
+**Why This is Critical:**
+- Components built in isolation (CRUD, Filter, Search, etc.)
+- Each component has passing unit tests
+- BUT App.tsx still has placeholder content
+- **Without integration task, app is non-functional despite "done" status**
+
+**Integration Feature Must:**
+1. **Test integration** (1.N.1):
+   - Write `tests/App.integration.test.tsx`
+   - Test all components work together
+   - Test data flows between components
+   - Test user workflows end-to-end
+
+2. **Implement integration** (1.N.2):
+   - **UPDATE** `src/App.tsx` to import all components
+   - Wire state management across components
+   - Create complete application layout
+   - Verify application actually runs
+
+**Detection Rules:**
+
+```javascript
+const requiresIntegration = (
+  technologies.includes('react') ||
+  technologies.includes('vue') ||
+  technologies.includes('svelte') ||
+  features.length >= 3  // Multiple components = need integration
+);
+
+if (requiresIntegration) {
+  // ADD integration as FINAL feature (after all component features)
+  features.push({
+    id: `1.${features.length + 1}`,
+    title: "Application Integration",
+    dependencies: allComponentFeatureIds,
+    tasks: [
+      { title: "Write application integration tests" },
+      { title: "Integrate all components into App" }
+    ]
+  });
+}
+```
+
+**Example - React Todo App:**
+```json
+{
+  "id": "1.8",
+  "type": "feature",
+  "title": "Application Integration",
+  "dependencies": ["1.3", "1.4", "1.5", "1.6"],
+  "children": ["1.8.1", "1.8.2"]
+},
+{
+  "id": "1.8.1",
+  "type": "task",
+  "title": "Write application integration tests",
+  "deliverables": ["tests/App.integration.test.tsx"],
+  "agent": "test-first-agent"
+},
+{
+  "id": "1.8.2",
+  "type": "task",
+  "title": "Integrate all components into App.tsx",
+  "dependencies": ["1.8.1"],
+  "deliverables": ["src/App.tsx"],  // UPDATE existing App.tsx
+  "agent": "component-implementation-agent"
+}
+```
+
+**Task 1.8.2 Agent Instructions:**
+```
+UPDATE src/App.tsx to:
+- Import: TodoList, AddTodo, FilterBar, SearchBar
+- Import: useTodoState, useLocalStorage hooks
+- Create application layout
+- Wire state management
+- Verify application runs in browser
+```
+
+**This prevents:**
+- ❌ Epic marked "done" when app doesn't work
+- ❌ All tests pass but app shows placeholder
+- ❌ Components exist but never used
+- ❌ Need for manual integration after workflow complete
+
+**When to SKIP integration feature:**
+- Single HTML page (no components)
+- Backend API (no UI)
+- CLI tool (no browser)
+- Library/SDK (no application)
 
 ---
 
@@ -508,7 +618,7 @@ jq '.tasks | length' .claude/memory/task-index.json
 **Before writing task-index.json, I verify**:
 
 1. ✅ Exactly 1 epic (id="1")
-2. ✅ 3-7 features (ids="1.1" through "1.7")
+2. ✅ 3-7 features (ids="1.1" through "1.7" or "1.8" if integration needed)
 3. ✅ Each feature has ≥2 tasks (test + implementation minimum)
 4. ✅ All test tasks come before implementation tasks
 5. ✅ All implementation tasks depend on corresponding test tasks
@@ -517,6 +627,47 @@ jq '.tasks | length' .claude/memory/task-index.json
 8. ✅ All required fields present (id, type, title, status, parent, children)
 9. ✅ All agents valid (exist in agent catalog)
 10. ✅ Valid JSON syntax
+11. ✅ **CRITICAL: Component-based apps have "Application Integration" as FINAL feature**
+
+**Validation Rule #11 Details:**
+```javascript
+// Check if project needs integration feature
+const isComponentBased = (
+  technologies.includes('react') ||
+  technologies.includes('vue') ||
+  technologies.includes('svelte') ||
+  features.filter(f => f.title.includes('Component') || f.title.includes('CRUD')).length >= 2
+);
+
+if (isComponentBased) {
+  const lastFeature = features[features.length - 1];
+
+  // MUST have integration feature as last feature
+  if (!lastFeature.title.includes('Integration') && !lastFeature.title.includes('Application Integration')) {
+    throw new Error('Component-based app missing required Application Integration feature');
+  }
+
+  // Integration feature MUST depend on all component features
+  const componentFeatureIds = features
+    .filter(f => f.title.includes('Component') || f.title.includes('CRUD') || f.title.includes('Filter'))
+    .map(f => f.id);
+
+  if (!lastFeature.dependencies || !componentFeatureIds.every(id => lastFeature.dependencies.includes(id))) {
+    throw new Error('Integration feature must depend on all component features');
+  }
+
+  // Integration feature MUST have 2 tasks (test + implement)
+  if (lastFeature.children.length !== 2) {
+    throw new Error('Integration feature must have exactly 2 tasks (test + integration)');
+  }
+
+  // Second task MUST update App.tsx (or App.vue/App.svelte)
+  const integrationTask = tasks.find(t => t.id === lastFeature.children[1]);
+  if (!integrationTask.deliverables.some(d => d.includes('App.'))) {
+    throw new Error('Integration task must update App.tsx/vue/svelte');
+  }
+}
+```
 
 **If validation fails**: I fix the issue and regenerate. Never write invalid JSON.
 
