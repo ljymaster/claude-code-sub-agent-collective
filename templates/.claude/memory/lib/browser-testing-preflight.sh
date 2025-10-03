@@ -9,12 +9,8 @@ LIB_DIR="$(dirname "$0")"
 # shellcheck disable=SC1091
 source "$LIB_DIR/logging.sh" 2>/dev/null || true
 
-# Get user request from argument
+# Get user request from argument (optional - used for UI detection)
 USER_REQUEST="${1:-}"
-
-if [ -z "$USER_REQUEST" ]; then
-  exit 0  # No request provided, skip
-fi
 
 # Log that preflight is starting
 if command -v log_event &>/dev/null; then
