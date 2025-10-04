@@ -126,6 +126,33 @@ Deploy `@task-breakdown-agent` to parse the user's request into WBS hierarchy an
 - Implementation task ALWAYS depends on test task
 - This enforces TDD at the task structure level
 
+**After task-breakdown-agent completes:**
+
+**MANDATORY:** Read `.claude/memory/task-index.json` and display the complete WBS hierarchy tree showing:
+- Epic with ID and title
+- All features with IDs and titles
+- All tasks with IDs, titles, and assigned agents
+
+Use the tree format from van-output-template.md (📋 WBS Hierarchy section). This gives users visibility into the plan before execution starts.
+
+**Example display:**
+```
+📋 WBS Hierarchy (3 features, 6 tasks):
+
+Epic 1: Todo Application
+├── Feature 1.1: Project Setup
+│   ├── Task 1.1.1: Write infrastructure tests (test-first-agent)
+│   └── Task 1.1.2: Setup Vite + React + TypeScript (infrastructure-implementation-agent)
+├── Feature 1.2: Todo List Component
+│   ├── Task 1.2.1: Write TodoList tests (test-first-agent)
+│   └── Task 1.2.2: Implement TodoList component (component-implementation-agent)
+└── Feature 1.3: Add Todo Feature
+    ├── Task 1.3.1: Write AddTodo tests (test-first-agent)
+    └── Task 1.3.2: Implement AddTodo component (component-implementation-agent)
+
+Starting execution...
+```
+
 ### STEP 2: Find Next Available Task
 
 ```bash

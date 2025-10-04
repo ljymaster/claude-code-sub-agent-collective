@@ -68,11 +68,28 @@ After completion:
   ⎿  Done ([N] tool uses · [X.X]k tokens · [M]m [S]s)
 
 ● ✅ Task hierarchy created successfully!
+
+  📋 WBS Hierarchy ([X] features, [Y] tasks):
+
+  Epic 1: [Epic Title]
+  ├── Feature 1.1: [Feature Title]
+  │   ├── Task 1.1.1: Write [feature] tests (test-first-agent)
+  │   └── Task 1.1.2: Implement [feature] (component-implementation-agent)
+  ├── Feature 1.2: [Feature Title]
+  │   ├── Task 1.2.1: Write [feature] tests (test-first-agent)
+  │   └── Task 1.2.2: Implement [feature] (feature-implementation-agent)
+  └── [Continue for all features...]
+
+  Starting execution...
 ```
+
+**CRITICAL:** Always read task-index.json after task-breakdown-agent completes and display the full hierarchy tree. This is MANDATORY, not optional.
 
 **Variables:**
 - `[Title]` - Extract from user request or PRD
 - `[Technologies]` - Auto-detected from request/PRD analysis
+- `[X]` - Feature count
+- `[Y]` - Task count
 - `[N]` - Tool use count from agent
 - `[X.X]k` - Token count formatted
 - `[M]m [S]s` - Time duration
