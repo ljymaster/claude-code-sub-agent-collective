@@ -43,28 +43,37 @@ Build a simple login form with username and password fields
 
 **Automatic Agent Sequence (NO user intervention):**
 
-1. **Hub Claude** analyzes request → deploys `@component-implementation-agent` via Task tool
+1. **Hub Claude** analyzes request → deploys `@task-breakdown-agent` via Task tool
 
-2. **@component-implementation-agent** executes:
-   - TDD hook enforces tests-first (blocks Write until tests exist)
-   - Writes tests first (e.g., `LoginForm.test.js`)
-   - Writes implementation (e.g., `LoginForm.html`, `LoginForm.js`)
-   - Completes with: "Deploy @tdd-validation-agent for final validation"
+2. **@task-breakdown-agent** executes:
+   - Creates task hierarchy (Epic → Features → Tasks)
+   - Creates test+implementation task pairs for each feature
+   - Stores in `.claude/memory/task-index.json`
 
-3. **Hub Claude** reads suggestion → deploys `@tdd-validation-agent` via Task tool
+3. **For each feature, Hub Claude executes TDD cycle:**
+   - Deploys `@test-first-agent` for test task (e.g., 1.1.1)
+   - Deploys `@component-implementation-agent` for implementation task (e.g., 1.1.2)
+   - TDD hooks enforce tests-first (blocks Write until tests exist)
 
-4. **@tdd-validation-agent** executes:
+4. **When feature completes (all tasks done), hooks ENFORCE validation:**
+   - **SubagentStop hook** creates `.needs-validation-{FEATURE_ID}` marker
+   - **PreToolUse hook** BLOCKS all task deployments until validation complete
+   - Hub MUST deploy `@tdd-validation-agent` (only way forward)
+
+5. **@tdd-validation-agent** executes:
    - Runs tests to verify they pass
    - **SCANS IMPLEMENTATION CODE** for browser functionality:
      - Detects `<form>`, `<input>`, `<button>` elements
      - Detects `addEventListener`, `onclick` handlers
      - Detects DOM manipulation (`document.querySelector`, etc.)
-   - **IF UI/DOM detected**: Suggests "Deploy @chrome-devtools-testing-agent"
-   - **IF no UI/DOM**: Says "Task ready for closure"
+   - **IF UI/DOM detected**: Creates `.needs-browser-testing-{FEATURE_ID}` marker
+   - **IF no UI/DOM**: Workflow continues to next feature
 
-5. **Hub Claude** reads suggestion → deploys `@chrome-devtools-testing-agent` via Task tool
+6. **If browser testing required, hooks ENFORCE deployment:**
+   - **PreToolUse hook** BLOCKS all task deployments until browser testing complete
+   - Hub MUST deploy `@chrome-devtools-testing-agent` (only way forward)
 
-6. **@chrome-devtools-testing-agent** executes:
+7. **@chrome-devtools-testing-agent** executes:
    - Opens browser to application URL
    - **CLICKS and INTERACTS** with actual UI (no console.log needed)
    - Fills username field using `mcp__chrome-devtools__fill`
@@ -78,14 +87,17 @@ Build a simple login form with username and password fields
    - Checks network requests completed
    - Reports: "UI interactions verified ✅"
 
-7. **Hub Claude** reports all gates passed → Complete
+8. **Workflow continues** to next feature → Repeat steps 3-7 for each feature
+
+9. **Hub Claude** reports all features complete → Epic done
 
 ### Key Principles (CRITICAL)
 
-**AGENTS DECIDE NEXT STEPS, NOT USERS:**
-- Users never say "add console.log" or "test in browser"
-- Agents analyze code and suggest next agent automatically
-- Hub Claude reads agent suggestions and deploys next agent
+**VALIDATION IS DETERMINISTIC AND ENFORCED:**
+- Hooks physically block workflow until validation agents deployed
+- Hub has NO CHOICE - must deploy tdd-validation-agent when feature completes
+- Browser testing automatically enforced when UI detected + browserTesting=true
+- NOT based on Hub decisions or agent suggestions - enforced by hooks
 
 **BROWSER TESTING USES ACTUAL INTERACTIONS:**
 - Chrome DevTools MCP **clicks buttons** and **fills forms**
@@ -98,19 +110,36 @@ Build a simple login form with username and password fields
 - Implementation files cannot be written until tests exist
 - Automatic and transparent to agents
 
+**HOOK-BASED ENFORCEMENT SYSTEM:**
+- SubagentStop creates validation markers when features complete
+- PreToolUse blocks tasks until correct validation agents deployed
+- Markers removed when correct agent deployed
+- System is 100% deterministic - no LLM decision-making
+
 ### Agent Intelligence Rules
 
+**task-breakdown-agent:**
+- Creates deterministic task hierarchy from user request
+- Creates test+implementation task pairs for each feature
+- Assigns specialist agents to each task
+
+**test-first-agent:**
+- Writes tests BEFORE implementation
+- Creates test files that hooks will use for TDD enforcement
+
 **component-implementation-agent:**
-- Builds UI components with TDD
-- Suggests: "Deploy @tdd-validation-agent"
+- Implements UI components after tests written
+- Completes task → hook creates validation marker → workflow blocked
 
 **tdd-validation-agent:**
-- Validates TDD methodology
+- DEPLOYED AUTOMATICALLY when feature completes (hook enforced)
+- Validates TDD methodology (tests pass, build succeeds)
 - **Scans code for**: `<form>`, `<input>`, event handlers, DOM APIs
-- **IF UI detected**: Suggests "Deploy @chrome-devtools-testing-agent"
-- **IF no UI**: Says "Task ready for closure"
+- **IF UI detected**: Creates browser testing marker → workflow blocked again
+- **IF no UI**: Marker removed, workflow continues
 
 **chrome-devtools-testing-agent:**
+- DEPLOYED AUTOMATICALLY when UI detected + browserTesting=true (hook enforced)
 - Tests browser functionality via actual interactions
 - Primary method: Click, fill, verify DOM changes
 - Secondary: Network requests, console errors
@@ -692,8 +721,10 @@ Step 3: Hub deploys @chrome-devtools-testing-agent
 - If you see implementation created first → hook is broken
 
 **Agent Handoffs Working:**
-- Hub should deploy tdd-validation-agent after implementation agent completes
-- Hub should deploy chrome-devtools-testing-agent after TDD validation (if UI detected)
+- SubagentStop hook should create validation marker when feature completes
+- PreToolUse hook should BLOCK Hub from deploying any agent except tdd-validation-agent
+- tdd-validation-agent should create browser testing marker when UI detected
+- PreToolUse hook should BLOCK Hub from deploying any agent except chrome-devtools-testing-agent (if browserTesting=true)
 - If Hub implements directly → delegation broken
 
 **Browser Testing Working:**
@@ -709,8 +740,12 @@ Step 3: Hub deploys @chrome-devtools-testing-agent
 - Check agent descriptions are clear for routing
 
 **"Browser testing not triggered"**
-- Check tdd-validation-agent scans for DOM/UI code
-- Check agent suggests chrome-devtools-testing-agent
+- Check SubagentStop hook creates validation marker when feature completes
+- Check PreToolUse hook blocks workflow until tdd-validation-agent deployed
+- Check tdd-validation-agent scans for DOM/UI code and creates browser testing marker
+- Check PreToolUse hook blocks workflow until chrome-devtools-testing-agent deployed (if browserTesting=true)
+- Check .claude/memory/markers/ directory for marker files
+- Check hook logs: `cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.reason | contains("validation"))'`
 
 **"TDD hook doesn't block"**
 - Check hook uses hookSpecificOutput JSON format

@@ -45,13 +45,22 @@ When enabled, the system automatically:
 - UI concepts: `ui`, `interface`, `dashboard`, `page`, `layout`, `responsive`
 - User actions: `login`, `signup`, `authentication`, `interactive`
 
-**Workflow**:
+**Workflow** (Hook-Enforced, 100% Deterministic):
 ```
 1. task-breakdown-agent detects UI → shows browser testing notification
-2. component-implementation-agent completes → suggests tdd-validation-agent
-3. tdd-validation-agent scans code for UI → suggests chrome-devtools-testing-agent
-4. chrome-devtools-testing-agent validates in browser → verifies CSS + interactions
+2. component-implementation-agent completes feature tasks
+3. SubagentStop hook creates .needs-validation-{FEATURE_ID} marker
+4. PreToolUse hook BLOCKS all agent deployments except tdd-validation-agent
+5. tdd-validation-agent scans code for UI → creates .needs-browser-testing-{FEATURE_ID} marker
+6. PreToolUse hook BLOCKS all agent deployments except chrome-devtools-testing-agent (if browserTesting=true)
+7. chrome-devtools-testing-agent validates in browser → verifies CSS + interactions
 ```
+
+**Enforcement Mechanism**:
+- Physical marker files (.needs-validation-*, .needs-browser-testing-*) block workflow
+- Hub Claude has NO CHOICE - hooks physically prevent skipping validation
+- NOT based on LLM decisions or agent suggestions
+- 100% deterministic - same config = same behavior every time
 
 ---
 
@@ -322,8 +331,41 @@ Tasks are automatically assigned to specialist agents based on type:
 2. ✅ Deliverables exist (checks file paths)
 3. ✅ Updates task status to "done"
 4. ✅ Triggers WBS rollup (updates parent progress)
+5. ✅ Creates validation markers when features complete
 
 **If validation fails**: Agent cannot complete, status stays in-progress
+
+**Marker Creation Logic**:
+- Detects when implementation agent completes (agent name matches `*-implementation-agent`)
+- Checks if all sibling tasks in feature are done
+- If feature complete: creates `.needs-validation-{FEATURE_ID}` marker
+- This marker physically blocks workflow until validation agent deployed
+
+---
+
+### Marker-Based Validation Enforcement
+
+**How It Works**:
+
+1. **Feature Completion Detection**:
+   - SubagentStop hook checks if last task in feature just completed
+   - Creates `.claude/memory/markers/.needs-validation-{FEATURE_ID}` file
+   - This marker is a physical file that blocks workflow
+
+2. **Validation Agent Enforcement**:
+   - PreToolUse hook checks for `.needs-validation-*` markers before deploying agents
+   - If marker exists AND agent != tdd-validation-agent: DENY deployment
+   - If marker exists AND agent == tdd-validation-agent: ALLOW + remove marker
+   - Hub Claude physically cannot skip validation
+
+3. **Browser Testing Enforcement** (if browserTesting=true):
+   - tdd-validation-agent scans code for UI elements (`<form>`, event handlers, etc.)
+   - If UI detected: creates `.needs-browser-testing-{FEATURE_ID}` marker
+   - PreToolUse hook checks for browser testing marker
+   - If marker exists AND agent != chrome-devtools-testing-agent: DENY deployment
+   - If marker exists AND agent == chrome-devtools-testing-agent: ALLOW + remove marker
+
+**Result**: 100% deterministic validation enforcement. No LLM decision-making. Physical file gates.
 
 ---
 
