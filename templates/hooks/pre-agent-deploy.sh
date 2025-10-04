@@ -16,25 +16,25 @@ source "$LIB_DIR/logging.sh" 2>/dev/null || true
 TOOL_INPUT=$(cat)
 TOOL_NAME=$(echo "$TOOL_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 
-# If no index exists, allow everything (LOG this decision)
-if [[ ! -f "$TASKS_INDEX" ]]; then
-  log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "No task index - allowing all operations" '{"taskIndexExists":false}'
-  exit 0
-fi
-
 # Only validate Task tool (agent deployment)
 if [[ "$TOOL_NAME" != "Task" ]]; then
   log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "Not a Task tool - no validation needed" "{\"tool\":\"$TOOL_NAME\"}"
   exit 0
 fi
 
-# Check preflight configuration required
+# Check preflight configuration required FIRST (before task index check)
 if [[ ! -f "$MEMORY_DIR/.preflight-done" ]]; then
   log_hook_event "PreToolUse" "Task" "" "deny" "Preflight configuration required" '{"preflightDone":false}'
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Preflight configuration required"}}
 JSON
   exit 2
+fi
+
+# If no index exists, allow everything (LOG this decision)
+if [[ ! -f "$TASKS_INDEX" ]]; then
+  log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "No task index - allowing all operations" '{"taskIndexExists":false}'
+  exit 0
 fi
 
 # Check for validation markers BEFORE proceeding with task validation
