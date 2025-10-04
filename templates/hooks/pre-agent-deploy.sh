@@ -28,6 +28,15 @@ if [[ "$TOOL_NAME" != "Task" ]]; then
   exit 0
 fi
 
+# Check preflight configuration required
+if [[ ! -f "$MEMORY_DIR/.preflight-done" ]]; then
+  log_hook_event "PreToolUse" "Task" "" "deny" "Preflight configuration required" '{"preflightDone":false}'
+  cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Preflight configuration required"}}
+JSON
+  exit 2
+fi
+
 # Check for validation markers BEFORE proceeding with task validation
 MARKERS_DIR="$MEMORY_DIR/markers"
 mkdir -p "$MARKERS_DIR"
