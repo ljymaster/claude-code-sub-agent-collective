@@ -19,6 +19,9 @@ TOOL_NAME=$(echo "$TOOL_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo
 # Only validate Task tool (agent deployment)
 if [[ "$TOOL_NAME" != "Task" ]]; then
   log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "Not a Task tool - no validation needed" "{\"tool\":\"$TOOL_NAME\"}"
+  cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Not a Task tool - no validation needed"}}
+JSON
   exit 0
 fi
 
@@ -34,6 +37,9 @@ fi
 # If no index exists, allow everything (LOG this decision)
 if [[ ! -f "$TASKS_INDEX" ]]; then
   log_hook_event "PreToolUse" "$TOOL_NAME" "" "allow" "No task index - allowing all operations" '{"taskIndexExists":false}'
+  cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"No task index - allowing all operations"}}
+JSON
   exit 0
 fi
 
@@ -56,6 +62,9 @@ if ls "$MARKERS_DIR"/.needs-validation-* 1>/dev/null 2>&1; then
     log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
       "Validation agent deployed - marker removed" \
       "{\"validationAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
+    cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Validation agent deployed - marker removed"}}
+JSON
     exit 0
   else
     # Wrong agent - block deployment
@@ -85,6 +94,9 @@ if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
       log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
         "Browser testing agent deployed - marker removed" \
         "{\"browserTestingAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
+      cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Browser testing agent deployed - marker removed"}}
+JSON
       exit 0
     else
       # Wrong agent - block deployment
@@ -109,11 +121,14 @@ fi
 
 # Extract task ID from prompt (pattern: "task 1.2.3" or "Task 1.2.3")
 PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
-TASK_ID=$(echo "$PROMPT" | grep -oiP '(?<=task\s)[0-9]+(\.[0-9]+)*' | head -n1)
+TASK_ID=$(echo "$PROMPT" | grep -oiP '(?<=task\s)[0-9]+(\.[0-9]+)*' | head -n1 || true)
 
 if [[ -z "$TASK_ID" ]]; then
   # No task ID found, allow (might be freeform work)
   log_hook_event "PreToolUse" "Task" "" "allow" "No task ID in prompt - allowing freeform agent deployment" '{"hasTaskId":false}'
+  cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"No task ID in prompt - allowing freeform agent deployment"}}
+JSON
   exit 0
 fi
 
@@ -199,4 +214,7 @@ with_memory_lock "$TASKS_INDEX" memory_update_json "$TASKS_INDEX" \
 
 log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "Leaf task, dependencies satisfied, marked in-progress" '{"isLeaf":true,"depsSatisfied":true,"statusUpdated":"in-progress"}'
 
+cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Task $TASK_ID ready - dependencies satisfied, marked in-progress"}}
+JSON
 exit 0
