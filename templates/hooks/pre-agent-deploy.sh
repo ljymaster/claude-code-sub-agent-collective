@@ -94,13 +94,12 @@ if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
 
   if [[ "$BROWSER_TESTING" == "true" ]]; then
     if [[ "$REQUESTED_AGENT" == "chrome-devtools-testing-agent" ]]; then
-      # Correct agent - remove marker and allow
-      rm "$MARKER_FILE"
+      # Correct agent - allow deployment (marker removed on completion via SubagentStop)
       log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
-        "Browser testing agent deployed - marker removed" \
+        "Browser testing agent deployment allowed" \
         "{\"browserTestingAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
       cat <<JSON
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Browser testing agent deployed - marker removed"}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Browser testing agent deployment allowed - marker will be removed on completion"}}
 JSON
       exit 0
     else

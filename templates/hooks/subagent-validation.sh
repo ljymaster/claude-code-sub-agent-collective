@@ -50,6 +50,31 @@ if [[ -z "$TASK_ID" ]]; then
 fi
 
 if [[ -z "${TASK_ID:-}" || "$TASK_ID" == "null" ]]; then
+  # No task ID - check if this is chrome-devtools-testing-agent (freeform deployment)
+  AGENT_NAME=""
+  if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" ]]; then
+    AGENT_NAME=$(jq -r '
+      [.[] | select(.type == "tool_use" and .name == "Task")] |
+      .[-1].input.prompt // empty
+    ' "$TRANSCRIPT_PATH" 2>/dev/null | grep -oP '@\K[a-z-]+-agent' | head -n1 || echo "")
+  fi
+
+  # If chrome-devtools-testing-agent, remove browser marker and allow
+  if [[ "$AGENT_NAME" == "chrome-devtools-testing-agent" ]]; then
+    MARKERS_DIR="$MEMORY_DIR/markers"
+    if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
+      BROWSER_MARKER=$(ls "$MARKERS_DIR"/.needs-browser-testing-* | head -1)
+      FEATURE_ID=$(basename "$BROWSER_MARKER" | sed 's/^\.needs-browser-testing-//')
+
+      rm "$BROWSER_MARKER"
+      log_hook_event "SubagentStop" "" "" "allow" \
+        "Browser testing completed - marker removed for feature $FEATURE_ID" \
+        "{\"browserTestingComplete\":true,\"featureId\":\"$FEATURE_ID\"}"
+      echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"Browser testing completed - marker removed"}}'
+      exit 0
+    fi
+  fi
+
   log_hook_event "SubagentStop" "" "" "allow" "No task ID found - allowing agent completion" '{"taskIdFound":false}'
   echo '{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"No task detected for validation"}}'
   exit 0
