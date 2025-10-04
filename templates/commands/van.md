@@ -213,6 +213,47 @@ Deploy @test-first-agent via Task tool for task 1.1.1
 
 Read updated task-index.json, find next task, deploy agent. Repeat until all leaf tasks done.
 
+### STEP 7: Final Marker Check (MANDATORY)
+
+**After all leaf tasks complete, BEFORE declaring workflow done:**
+
+```bash
+ls .claude/memory/markers/.needs-* 2>/dev/null
+```
+
+**If markers exist:**
+1. Read marker filename to identify required action:
+   - `.needs-validation-X.Y` → Deploy `@tdd-validation-agent` for feature X.Y
+   - `.needs-browser-testing-X.Y` → Deploy `@chrome-devtools-testing-agent` for feature X.Y
+2. Deploy the appropriate agent via Task tool
+3. After agent completes, repeat marker check (STEP 7 again)
+4. Continue until NO markers remain
+
+**CRITICAL:** Only declare workflow complete when:
+- All leaf tasks status = "done" AND
+- `.claude/memory/markers/` contains NO `.needs-*` files
+
+### Handling SubagentStop Denials
+
+**If SubagentStop hook denies agent completion:**
+
+1. Agent will show error: "Task operation blocked by hook: [reason]"
+2. Read the denial reason carefully
+3. **If reason says "Deploy @agent-name":**
+   - Deploy that agent immediately via Task tool
+   - After that agent completes and marker is removed
+   - RE-DEPLOY the originally denied agent
+   - Second attempt should succeed (marker removed, hook allows)
+4. Continue workflow from where it was interrupted
+
+**Example denial flow:**
+```
+tdd-validation-agent → denied by SubagentStop (browser marker exists)
+→ Deploy chrome-devtools-testing-agent (removes marker)
+→ RE-DEPLOY tdd-validation-agent (now succeeds)
+→ Continue to next task
+```
+
 ## TDD Workflow Integration
 
 **The WBS structure ENFORCES TDD:**

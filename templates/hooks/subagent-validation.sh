@@ -131,6 +131,23 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
     fi
   fi
 
+  # CRITICAL: Check for browser testing markers before allowing completion
+  # If validation agent created browser marker, DENY completion until browser testing done
+  MARKERS_DIR="$MEMORY_DIR/markers"
+  if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
+    BROWSER_MARKER=$(ls "$MARKERS_DIR"/.needs-browser-testing-* | head -1)
+    FEATURE_ID=$(basename "$BROWSER_MARKER" | sed 's/^\.needs-browser-testing-//')
+
+    log_hook_event "SubagentStop" "" "$TASK_ID" "deny" \
+      "Browser testing required for feature $FEATURE_ID" \
+      "{\"browserTestingRequired\":true,\"featureId\":\"$FEATURE_ID\"}"
+
+    cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires browser testing. Deploy @chrome-devtools-testing-agent before this agent can complete."}}
+JSON
+    exit 2
+  fi
+
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"Task $TASK_ID validated: tests=$tests_pass, deliverables=$deliverables_exist"}}
 JSON
