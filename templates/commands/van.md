@@ -20,11 +20,9 @@ When user provides a request, you automatically execute this workflow combining 
 
 ## AUTOMATIC WORKFLOW
 
-### STEP 0: Preflight Configuration (FIRST TIME ONLY)
+### STEP 0: Preflight Configuration
 
-**Check if `.claude/memory/.preflight-done` exists. If YES, skip this step entirely.**
-
-**If NO, conduct this interactive configuration (like spec-kit /clarify pattern):**
+Conduct this interactive configuration (like spec-kit /clarify pattern):
 
 **Question 1:**
 Ask: "📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research. (y/n)"

@@ -26,6 +26,36 @@ This is the **Claude Code Sub-Agent Collective** - an NPX-distributed framework 
 - **Command System**: `/van` command activates collective framework
 - **Template System**: Installation templates in `templates/`
 
+## CRITICAL RULE: Determinism Through Hooks, Not Instructions
+
+**NEVER add conditional logic or checks to van.md, agent files, or command files.**
+
+❌ **WRONG (van.md):**
+```
+Check if .preflight-done exists. If YES, skip. If NO, run questions.
+```
+
+✅ **CORRECT (van.md):**
+```
+Run preflight questions. Create .preflight-done when complete.
+```
+
+**Why:**
+- van.md/agents = **INSTRUCTIONS ONLY** - Tell Hub/agents what to do
+- Hooks = **ALL LOGIC** - Check conditions, enforce rules, block/allow
+
+**The hook handles:**
+- Checking if .preflight-done exists
+- Denying deployment if missing
+- Allowing deployment if present
+
+**van.md just says:**
+- Do Step 0
+- Do Step 1
+- etc.
+
+Hub Claude follows instructions. Hook enforces rules. Clean separation.
+
 ## v3.0 Intelligent Agent Orchestration
 
 ### How It Works (CRITICAL - READ THIS)
