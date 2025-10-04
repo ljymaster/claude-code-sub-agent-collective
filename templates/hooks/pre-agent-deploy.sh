@@ -73,7 +73,12 @@ JSON
       "{\"blockedAgent\":\"$REQUESTED_AGENT\",\"requiredAgent\":\"tdd-validation-agent\",\"featureId\":\"$FEATURE_ID\"}"
 
     cat <<JSON
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires validation. MUST deploy @tdd-validation-agent before proceeding to next tasks."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"⚠️ TASK BLOCKED - Feature $FEATURE_ID validation required
+
+REQUIRED ACTION:
+Deploy @tdd-validation-agent for feature $FEATURE_ID via Task tool
+
+The marker .needs-validation-$FEATURE_ID blocks all other agent deployments."}}
 JSON
     exit 2
   fi
@@ -105,7 +110,12 @@ JSON
         "{\"blockedAgent\":\"$REQUESTED_AGENT\",\"requiredAgent\":\"chrome-devtools-testing-agent\",\"featureId\":\"$FEATURE_ID\"}"
 
       cat <<JSON
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires browser testing (browserTesting enabled). MUST deploy @chrome-devtools-testing-agent before proceeding."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"⚠️ TASK BLOCKED - Feature $FEATURE_ID browser testing required
+
+REQUIRED ACTION:
+Deploy @chrome-devtools-testing-agent for feature $FEATURE_ID via Task tool
+
+The marker .needs-browser-testing-$FEATURE_ID blocks all other agent deployments."}}
 JSON
       exit 2
     fi

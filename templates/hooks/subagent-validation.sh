@@ -143,7 +143,14 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
       "{\"browserTestingRequired\":true,\"featureId\":\"$FEATURE_ID\"}"
 
     cat <<JSON
-{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires browser testing. Deploy @chrome-devtools-testing-agent before this agent can complete."}}
+{"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"deny","permissionDecisionReason":"⚠️ VALIDATION BLOCKED - Browser testing required for feature $FEATURE_ID
+
+REQUIRED ACTIONS:
+1. Deploy @chrome-devtools-testing-agent for feature $FEATURE_ID via Task tool
+2. After browser agent completes (removes .needs-browser-testing-$FEATURE_ID marker)
+3. Re-deploy this validation agent - it will succeed on second attempt
+
+The marker .needs-browser-testing-$FEATURE_ID blocks this agent from completing."}}
 JSON
     exit 2
   fi
