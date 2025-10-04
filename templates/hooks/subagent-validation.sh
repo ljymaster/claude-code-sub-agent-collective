@@ -102,6 +102,35 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
   # Roll up via wbs-helpers.sh (LOGGED!)
   propagate_status_up "$TASK_ID" || true
 
+  # Check if this task completion means a feature is done (requires validation)
+  AGENT=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .agent // empty" "$TASKS_INDEX" 2>/dev/null || echo "")
+  log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Agent check: agent=$AGENT" "{\"agent\":\"$AGENT\"}" || true
+
+  if [[ "$AGENT" =~ -implementation-agent$ ]]; then
+    log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Agent pattern matched" "{}" || true
+    # This is an implementation task - check if it's the last task in its feature
+    PARENT_ID=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .parent // empty" "$TASKS_INDEX" 2>/dev/null || echo "")
+    log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Parent check: parent=$PARENT_ID" "{\"parent\":\"$PARENT_ID\"}" || true
+
+    if [[ -n "$PARENT_ID" && "$PARENT_ID" != "null" ]]; then
+      log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Parent valid" "{}" || true
+      # Check if all sibling tasks are done
+      ALL_DONE=$(jq -r ".tasks[] | select(.parent==\"$PARENT_ID\") | .status" "$TASKS_INDEX" 2>/dev/null | { grep -v "done" || true; } | wc -l | tr -d ' ')
+      log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Sibling check: ALL_DONE=$ALL_DONE" "{\"allDone\":\"$ALL_DONE\"}" || true
+
+      if [[ "$ALL_DONE" -eq 0 ]]; then
+        log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Creating marker for $PARENT_ID" "{}" || true
+        # Feature complete - create validation marker
+        mkdir -p "$MEMORY_DIR/markers" 2>&1 || true
+        touch "$MEMORY_DIR/markers/.needs-validation-${PARENT_ID}" 2>&1 || true
+
+        log_hook_event "SubagentStop" "" "$TASK_ID" "allow" \
+          "Feature $PARENT_ID complete - validation required" \
+          "{\"testsPass\":$tests_pass,\"deliverablesExist\":$deliverables_exist,\"validationMarkerCreated\":true,\"featureId\":\"$PARENT_ID\"}"
+      fi
+    fi
+  fi
+
   cat <<JSON
 {"hookSpecificOutput":{"hookEventName":"SubagentStop","permissionDecision":"allow","permissionDecisionReason":"Task $TASK_ID validated: tests=$tests_pass, deliverables=$deliverables_exist"}}
 JSON

@@ -28,6 +28,76 @@ if [[ "$TOOL_NAME" != "Task" ]]; then
   exit 0
 fi
 
+# Check for validation markers BEFORE proceeding with task validation
+MARKERS_DIR="$MEMORY_DIR/markers"
+mkdir -p "$MARKERS_DIR"
+
+# Extract prompt and agent name for marker checks
+PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
+REQUESTED_AGENT=$(echo "$PROMPT" | { grep -oP '@\K[a-z-]+-agent' || true; } | head -n1 || echo "")
+
+# Check for validation markers (Feature validation required)
+if ls "$MARKERS_DIR"/.needs-validation-* 1>/dev/null 2>&1; then
+  MARKER_FILE=$(ls "$MARKERS_DIR"/.needs-validation-* | head -1)
+  FEATURE_ID=$(basename "$MARKER_FILE" | sed 's/^\.needs-validation-//')
+
+  if [[ "$REQUESTED_AGENT" == "tdd-validation-agent" ]]; then
+    # Correct agent - remove marker and allow
+    rm "$MARKER_FILE"
+    log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
+      "Validation agent deployed - marker removed" \
+      "{\"validationAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
+    exit 0
+  else
+    # Wrong agent - block deployment
+    log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "deny" \
+      "Validation required before proceeding" \
+      "{\"blockedAgent\":\"$REQUESTED_AGENT\",\"requiredAgent\":\"tdd-validation-agent\",\"featureId\":\"$FEATURE_ID\"}"
+
+    cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires validation. MUST deploy @tdd-validation-agent before proceeding to next tasks."}}
+JSON
+    exit 2
+  fi
+fi
+
+# Check for browser testing markers (Browser validation required)
+if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
+  MARKER_FILE=$(ls "$MARKERS_DIR"/.needs-browser-testing-* | head -1)
+  FEATURE_ID=$(basename "$MARKER_FILE" | sed 's/^\.needs-browser-testing-//')
+
+  # Check browserTesting config
+  BROWSER_TESTING=$(jq -r '.browserTesting // true' "$MEMORY_DIR/config.json" 2>/dev/null || echo "true")
+
+  if [[ "$BROWSER_TESTING" == "true" ]]; then
+    if [[ "$REQUESTED_AGENT" == "chrome-devtools-testing-agent" ]]; then
+      # Correct agent - remove marker and allow
+      rm "$MARKER_FILE"
+      log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
+        "Browser testing agent deployed - marker removed" \
+        "{\"browserTestingAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
+      exit 0
+    else
+      # Wrong agent - block deployment
+      log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "deny" \
+        "Browser testing required before proceeding" \
+        "{\"blockedAgent\":\"$REQUESTED_AGENT\",\"requiredAgent\":\"chrome-devtools-testing-agent\",\"featureId\":\"$FEATURE_ID\"}"
+
+      cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires browser testing (browserTesting enabled). MUST deploy @chrome-devtools-testing-agent before proceeding."}}
+JSON
+      exit 2
+    fi
+  else
+    # Browser testing disabled - remove marker and continue
+    rm "$MARKER_FILE"
+    log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
+      "Browser testing skipped per config" \
+      "{\"browserTesting\":false,\"featureId\":\"$FEATURE_ID\"}"
+    # Fall through to normal validation
+  fi
+fi
+
 # Extract task ID from prompt (pattern: "task 1.2.3" or "Task 1.2.3")
 PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
 TASK_ID=$(echo "$PROMPT" | grep -oiP '(?<=task\s)[0-9]+(\.[0-9]+)*' | head -n1)

@@ -1,88 +1,84 @@
-# START HERE - Documentation Guide
+# START HERE - AI Documentation Guide
 
-**Last Updated**: 2025-10-01
-
----
-
-## CRITICAL: Two Separate Systems
-
-**Memory System** = Deterministic file storage (the foundation)
-**Task System** = Task management (built ON TOP of memory system)
-
-**DO NOT CONFUSE THESE.**
+**Last Updated**: 2025-10-04
 
 ---
 
-## What You Need to Read (In Order)
+## What This Project Is
 
-### 1. **Memory-System-Implementation-Strategy.md** 🏗️ FOUNDATION (READ FIRST)
-   - **What**: The deterministic memory layer - foundation for everything
-   - **Why Read First**: Nothing works without this
-   - **Status**: Design complete, ready to implement
-   - **Core Operations**:
-     - `memory_write()` - Atomic file writes
-     - `memory_read()` - Verified file reads
-     - `memory_update_json()` - Atomic JSON updates
+**Claude Code Collective** - NPX package that installs a TDD-focused AI agent framework into user projects.
 
-### 2. **DETERMINISTIC-TASK-SYSTEM-DESIGN.md** ⭐ TASK SYSTEM (READ SECOND)
-   - **What**: Task management system that USES the memory system
-   - **Why Read**: Understand how tasks work on top of memory
-   - **Status**: Design complete, ready for implementation
-   - **Key Sections**:
-     - CRITICAL DISTINCTION section (memory vs task)
-     - Problems with existing systems
-     - Our solution (Hooks + Memory + Extended Thinking)
-
-### 3. **Memory-Tool-API-Analysis.md** 📚 RESEARCH (REFERENCE)
-   - **What**: Analysis of Anthropic's memory tool API
-   - **Why**: Validation that our file-based approach is correct
-   - **Status**: Research complete
-   - **Key Takeaway**: Anthropic uses file-based storage - we're on the right track
+**Architecture**: Hub Claude + File-based Memory + Hooks + Specialized Agents
 
 ---
 
-## Other Documents (Reference Only)
+## Read These Documents (In Order)
 
-### Architecture & Implementation
-- **V3-ARCHITECTURE-DESIGN.md** - Current v3.0 architecture (already implemented)
-- **V3-IMPLEMENTATION-SUMMARY.md** - What we built in v3.0
-- **V3-Migration-Plan.md** - Migration plan for v3.0
+### 1. **V3-ARCHITECTURE-DESIGN.md** - The Big Picture
+   - **What**: v3.0 architecture overview
+   - **Why Read**: Understand how everything fits together
+   - **Key Sections**: Hub Claude, Memory, Hooks, Agents
 
-### User Documentation
-- **TESTING-GUIDE.md** - How to test the system
-- **USER-GUIDE.md** - User documentation
+### 2. **Memory-System-Implementation-Strategy.md** - The Foundation
+   - **What**: Deterministic file-based memory layer
+   - **Why Read**: Everything builds on this
+   - **Key Sections**: Atomic operations, memory.sh functions
 
----
+### 3. **DETERMINISTIC-TASK-SYSTEM-DESIGN.md** - Task Management
+   - **What**: Task system built on memory layer
+   - **Why Read**: How tasks work, hooks enforce rules
+   - **Key Sections**: task-index.json, hooks validation
 
-## What To Do Next
+### 4. **Phase-0-Test-Results-And-Fixes.md** - Phase 0 Results
+   - **What**: Test results from Phase 0 validation
+   - **Why Read**: Understand what was tested and found
+   - **Key Sections**: Issues found, solutions being implemented
 
-**Step 1**: Implement the memory system (3 functions)
-**Step 2**: Test the memory system thoroughly
-**Step 3**: Build task system on top of memory system
-
-**DO NOT proceed to task system until memory system is deterministic.**
-
----
-
-## TL;DR Summary
-
-| Document | What It's About | Read Order |
-|----------|-----------------|-----------|
-| Memory-System-Implementation-Strategy.md | Deterministic storage foundation | 1st (REQUIRED) |
-| DETERMINISTIC-TASK-SYSTEM-DESIGN.md | Task system built on memory | 2nd (REQUIRED) |
-| Memory-Tool-API-Analysis.md | Research validation | Reference |
-| V3-ARCHITECTURE-DESIGN.md | Current v3.0 (already built) | Reference |
-| TESTING-GUIDE.md | Testing procedures | Reference |
-| USER-GUIDE.md | User documentation | Reference |
+### 5. **V3-Cleanup-And-Final-Analysis.md** - CURRENT FOCUS ⭐
+   - **What**: TaskMaster removal phases and execution plan
+   - **Why Read**: This is what we're actively working on NOW
+   - **Key Sections**: Phase 0-4 definitions, TaskMaster deletion plan
 
 ---
 
-## Documentation Promise
+## Supporting Documentation
 
-**I will ONLY update existing documents from now on.**
+### Research (ai-docs/research/)
+- Memory-Tool-API-Analysis.md - Research on memory APIs
+- Logging-System-Design.md - Logging specification
+- Agent-TaskMaster-Cleanup-Analysis.md - Cleanup analysis
 
-No new documents unless explicitly requested.
+### Legacy v2.x (ai-docs/legacy/)
+- V3-Migration-Plan.md - Old migration plan
+- V3-IMPLEMENTATION-SUMMARY.md - Old summary
+- TESTING-GUIDE.md - v2 testing guide
+- USER-GUIDE.md - v2 user guide
+- HOOK-CONTRACTS.md - Old contracts
+- MEMORY-SCHEMA.md - Old schema
 
 ---
 
-**Next Question**: Do you want to implement the memory system now?
+## Quick Summary
+
+**What We Built**:
+1. File-based memory system (`.claude/memory/`)
+2. Task system using `task-index.json` (single file, all tasks)
+3. Hooks for TDD enforcement (PreToolUse, SubagentStop)
+4. 30+ specialized agents (component, feature, testing, quality)
+5. `/van` command for intelligent task breakdown
+
+**Current Status**: Phase 0 complete, ready to execute TaskMaster removal (Phase 1-4)
+
+**Next**: Delete TaskMaster, update agents, bump to v3.0.0
+
+---
+
+## What To Do
+
+1. Read the 5 main docs above (start with V3-ARCHITECTURE-DESIGN.md)
+2. **Focus on #5 (V3-Cleanup-And-Final-Analysis.md)** - this is current work
+3. Don't get confused by supporting docs (they're reference only)
+
+---
+
+**If you're lost, just read V3-ARCHITECTURE-DESIGN.md first.**

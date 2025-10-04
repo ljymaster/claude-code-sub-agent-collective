@@ -168,11 +168,26 @@ Use the tdd-validation-agent subagent to perform comprehensive TDD validation fo
    - User interactions (clicks, form submissions, navigation)
 
 2. **IF browser functionality detected:**
+```bash
+# Create browser testing marker (REQUIRED - triggers deterministic enforcement)
+# Extract feature ID from most recently completed implementation task
+FEATURE_ID=$(jq -r '
+  .tasks[] |
+  select(.type=="feature" and .status=="done") |
+  select(.children | length > 0) |
+  .id
+' .claude/memory/task-index.json | tail -1)
+
+mkdir -p .claude/memory/markers
+touch ".claude/memory/markers/.needs-browser-testing-${FEATURE_ID}"
+```
 ```
 Task X validation: PASSED ✅
 All tests passing, build successful, TDD compliance verified.
 
 **Browser testing required** - Code contains UI/DOM interactions.
+Marker created: .needs-browser-testing-${FEATURE_ID}
+
 Deploy @chrome-devtools-testing-agent to verify:
 - UI interactions work correctly (clicks, form submissions)
 - DOM state changes as expected

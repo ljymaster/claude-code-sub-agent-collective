@@ -409,4 +409,11 @@ All tasks validated deterministically through WBS + TDD + hooks.
 ✅ **SubagentStop Hook** - Validates and updates status automatically, logs operations
 ✅ **Logging System** - All hook decisions and memory operations logged to .claude/memory/logs/current/
 
-The deterministic task system with TDD enforcement is now active. Parse the user's request, create WBS with test+implementation task pairs, and start deploying agents.
+## Output Format
+
+**CRITICAL: Follow the standardized output format exactly.**
+
+**Import output template:**
+@./.claude-collective/van-output-template.md
+
+The deterministic task system with TDD enforcement is now active. Parse the user's request, create WBS with test+implementation task pairs, start deploying agents, and follow the output format template precisely.
