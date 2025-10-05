@@ -37,7 +37,17 @@
 ### 5. **V3-Cleanup-And-Final-Analysis.md** - CURRENT FOCUS ⭐
    - **What**: TaskMaster removal phases and execution plan
    - **Why Read**: This is what we're actively working on NOW
-   - **Key Sections**: Phase 0-4 definitions, TaskMaster deletion plan
+   - **Key Sections**: Phase 0 complete, Phase 0.5 (PRD workflow), Phase 1-5 plans
+
+### 6. **PRD-Workflow-Gap-Analysis.md** - Critical Gap Found
+   - **What**: Analysis of PRD workflow dependency on TaskMaster
+   - **Why Read**: Explains why Phase 0.5 is needed before Phase 1
+   - **Key Sections**: Gap identification, remediation options
+
+### 7. **Phase-0.5-Implementation-Plan.md** - Next Action
+   - **What**: Detailed plan for PRD workflow integration (4-5 hours)
+   - **Why Read**: Understand exactly what needs to be built before Phase 1
+   - **Key Sections**: Marker-based enforcement, three workflow paths, testing plan
 
 ---
 
@@ -67,17 +77,18 @@
 4. 30+ specialized agents (component, feature, testing, quality)
 5. `/van` command for intelligent task breakdown
 
-**Current Status**: Phase 0 complete, ready to execute TaskMaster removal (Phase 1-4)
+**Current Status**: Phase 0 complete, Phase 0.5 designed (PRD workflow integration needed)
 
-**Next**: Delete TaskMaster, update agents, bump to v3.0.0
+**Next**: Execute Phase 0.5 (4-5 hours), then Phase 1 (Delete TaskMaster)
 
 ---
 
 ## What To Do
 
-1. Read the 5 main docs above (start with V3-ARCHITECTURE-DESIGN.md)
-2. **Focus on #5 (V3-Cleanup-And-Final-Analysis.md)** - this is current work
-3. Don't get confused by supporting docs (they're reference only)
+1. Read docs 1-5 above (start with V3-ARCHITECTURE-DESIGN.md for big picture)
+2. **Read #6-7** - Critical gap found and remediation plan
+3. **Focus on #7 (Phase-0.5-Implementation-Plan.md)** - Next action item
+4. Don't get confused by supporting docs (they're reference only)
 
 ---
 
