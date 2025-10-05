@@ -134,14 +134,28 @@ The agent will parse the request and create task-index.json.
 
 **After task-breakdown-agent completes:**
 
-**MANDATORY:** Read `.claude/memory/task-index.json` and display the complete WBS hierarchy tree showing:
-- Epic with ID and title
-- All features with IDs and titles
-- All tasks with IDs, titles, and assigned agents
+**MANDATORY ACTIONS:**
+1. Read the ACTUAL task data from `.claude/memory/task-index.json`
+2. Display the hierarchy using this tree format template (replace [PLACEHOLDERS] with actual values from the JSON):
 
-Use the tree format from van-output-template.md (📋 WBS Hierarchy section). This gives users visibility into the plan before execution starts.
+```
+📋 WBS Hierarchy ([FEATURE_COUNT] features, [TASK_COUNT] tasks):
 
-**For reference only, here is an example display format for a hypothetical "Todo App" request (use this FORMAT but with the ACTUAL task data you just read from task-index.json):**
+Epic [EPIC_ID]: [EPIC_TITLE]
+├── Feature [FEATURE_1_ID]: [FEATURE_1_TITLE]
+│   ├── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+│   └── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+├── Feature [FEATURE_2_ID]: [FEATURE_2_TITLE]
+│   ├── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+│   └── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+└── Feature [FEATURE_3_ID]: [FEATURE_3_TITLE]
+    ├── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+    └── Task [TASK_ID]: [TASK_TITLE] ([AGENT_NAME])
+
+Starting execution...
+```
+
+**For reference only, here is how the format looks with example data (DO NOT output this - output the ACTUAL data from task-index.json using the format above):**
 ```
 📋 WBS Hierarchy (3 features, 6 tasks):
 
@@ -476,9 +490,12 @@ All tasks validated deterministically through WBS + TDD + hooks.
 
 ## Output Format
 
-**CRITICAL: Follow the standardized output format exactly.**
+**CRITICAL: Execute the workflow steps above and use the output format template for DISPLAYING progress, NOT as fake output.**
 
-**Import output template:**
-@./.claude-collective/van-output-template.md
+**Use `/templates/.claude-collective/van-output-template.md` as a formatting reference ONLY:**
+- Execute each STEP (deploy agents, run tools, read files)
+- Display progress using the formatting symbols and structure from the template
+- Do NOT output the template's example workflow as if it happened
+- Output ACTUAL tool results, ACTUAL agent deployments, ACTUAL file contents
 
-The deterministic task system with TDD enforcement is now active. Parse the user's request, create WBS with test+implementation task pairs, start deploying agents, and follow the output format template precisely.
+The deterministic task system with TDD enforcement is now active. Execute the workflow steps above (deploy task-breakdown-agent, find tasks, deploy agents) and display progress using the formatting guide.
