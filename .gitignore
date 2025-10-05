@@ -102,3 +102,4 @@ claude-code-collective/.claude-collective/metrics/snapshots/
 # tasks.json
 # tasks/ 
 .claude-collective/metrics/
+settings.local.json
