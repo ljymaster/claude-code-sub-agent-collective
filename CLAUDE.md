@@ -273,6 +273,22 @@ npx . clean               # Test cleanup functionality
 - `templates/settings.json` - Claude Code configuration template
 - `lib/file-mapping.js` - Template to destination mapping
 
+### CRITICAL: Development vs User Files
+
+**Root `.claude/` Directory (YOUR development environment):**
+- ❌ **NEVER COMMIT** - This is your local Claude Code configuration
+- ❌ **NOT DISTRIBUTED** - Users never see this
+- ✅ **Git ignored** - Should be in `.gitignore`
+- Purpose: Your personal development setup for working on this NPM package
+
+**`templates/.claude/` Directory (what USERS get):**
+- ✅ **COMMIT ALL CHANGES** - This gets distributed to users
+- ✅ **PACKAGED IN NPM** - Installed when users run `npx claude-code-collective init`
+- ✅ **Git tracked** - Core part of the package
+- Purpose: The collective framework that users install in their projects
+
+**Rule: Edit `templates/` to update the collective, ignore root `.claude/`**
+
 ## Development Workflow
 
 ### Branch-Based Testing Workflow
