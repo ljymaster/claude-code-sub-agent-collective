@@ -197,7 +197,7 @@ npm run metrics:report    # View metrics data
 
 ### Local Testing Workflow
 
-For testing changes before publishing (see ai-docs/Simple-Local-Testing-Workflow.md):
+**Test changes before publishing to ensure templates install correctly:**
 
 ```bash
 # Automated testing (does everything automatically)
@@ -425,6 +425,52 @@ npx . clean               # Test cleanup functionality
 - Agent definitions follow strict markdown format requirements
 - All templates live in `templates/` directory
 - File mapping is the single source of truth for what gets installed (lib/file-mapping.js:20-580)
+
+### Documentation Cross-Referencing (MANDATORY)
+
+**CRITICAL**: All documentation must be properly cross-referenced to maintain document hierarchy and traceability.
+
+**Rules:**
+1. **Never create standalone documents** - All new documents MUST reference their parent/related documents
+2. **Document hierarchy**:
+   - `ai-docs/START-HERE.md` - Main entry point (read this first)
+   - `ai-docs/V3-Cleanup-And-Final-Analysis.md` - Current focus document for v3.0 work
+   - All other docs link back to one of these
+3. **Reference format** - Include parent document link at the top of any detailed plan/analysis document
+4. **Update parent AND START-HERE** - When creating a detailed document, ALWAYS add reference to it in parent document AND update START-HERE.md if it's a major doc
+5. **Related documents** - List all related documents for context
+
+**Example (Correct):**
+```markdown
+# Phase 0.5: PRD Workflow Integration - Implementation Plan
+
+**Parent Document**: `ai-docs/V3-Cleanup-And-Final-Analysis.md` (see Phase 0.5 section)
+**Related Documents:**
+- `ai-docs/PRD-Workflow-Gap-Analysis.md` - Gap analysis
+- `ai-docs/V3-IMPLEMENTATION-SUMMARY.md` - Overall summary
+
+...document content...
+```
+
+**In Parent Document:**
+```markdown
+### Phase 0.5: PRD Workflow Integration
+
+**📋 DETAILED IMPLEMENTATION PLAN:** See `ai-docs/Phase-0.5-Implementation-Plan.md`
+
+**Quick Summary:**
+- Key points here
+- Link to detailed plan above
+```
+
+**Why This Matters:**
+- User needs to understand document relationships
+- Prevents orphaned documents
+- Maintains clear document hierarchy
+- Makes it easy to navigate documentation
+- Ensures all work is tracked in main document
+
+**If you violate this rule:** User will call it out as unacceptable (and they're right)
 
 ### TDD Requirements
 - All new functionality must have tests first
