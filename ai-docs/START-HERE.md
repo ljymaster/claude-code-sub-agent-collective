@@ -1,6 +1,6 @@
 # START HERE - AI Documentation Guide
 
-**Last Updated**: 2025-10-04
+**Last Updated**: 2025-10-05
 
 ---
 
@@ -49,6 +49,16 @@
    - **Why Read**: Understand exactly what needs to be built before Phase 1
    - **Key Sections**: Marker-based enforcement, three workflow paths, testing plan
 
+### 8. **External-Systems-Comparative-Analysis.md** - Research Findings
+   - **What**: Analysis of BMAD-METHOD and GitHub spec-kit vs our system
+   - **Why Read**: Understand competitive landscape and enhancement opportunities
+   - **Key Sections**: What they do well, what we do better, learnings
+
+### 9. **Phase-0.6-Implementation-Plan.md** - Optional Enhancement
+   - **What**: Context enrichment plan based on external research (6-8 hours)
+   - **Why Read**: Understand how to add rich context while keeping deterministic enforcement
+   - **Key Sections**: Phase artifacts, data models, parallel tasks, minimal context templates
+
 ---
 
 ## Supporting Documentation
@@ -77,9 +87,9 @@
 4. 30+ specialized agents (component, feature, testing, quality)
 5. `/van` command for intelligent task breakdown
 
-**Current Status**: Phase 0 complete, Phase 0.5 designed (PRD workflow integration needed)
+**Current Status**: Phase 0 complete, Phase 0.5 designed (PRD workflow integration needed), Phase 0.6 designed (optional context enrichment)
 
-**Next**: Execute Phase 0.5 (4-5 hours), then Phase 1 (Delete TaskMaster)
+**Next**: Execute Phase 0.5 (4-5 hours), optionally Phase 0.6 (6-8 hours), then Phase 1 (Delete TaskMaster)
 
 ---
 
@@ -87,8 +97,15 @@
 
 1. Read docs 1-5 above (start with V3-ARCHITECTURE-DESIGN.md for big picture)
 2. **Read #6-7** - Critical gap found and remediation plan
-3. **Focus on #7 (Phase-0.5-Implementation-Plan.md)** - Next action item
-4. Don't get confused by supporting docs (they're reference only)
+3. **Read #8** - External systems research (BMAD-METHOD + spec-kit analysis)
+4. **Read #9** - Phase 0.6 context enrichment plan (optional but valuable)
+5. **Focus on #7 (Phase-0.5-Implementation-Plan.md)** - Required before Phase 1
+6. **Consider #9 (Phase-0.6-Implementation-Plan.md)** - Optional enhancement for rich context
+7. Don't get confused by supporting docs (they're reference only)
+8. Re-read determinism rule in `CLAUDE.md` before editing any command or agent instructions (hooks enforce logic, instructions stay declarative)
+9. Review current `/van` preflight flow in `templates/commands/van.md` so Phase 0.5 questions extend the existing baseline instead of replacing it
+10. Flag remaining `.taskmaster` references in `templates/agents/prd-parser-agent.md` and `templates/agents/research-agent.md`—Phase 0.5 must migrate these to the new `.claude/memory/` layout
+11. Align `templates/docs/RESEARCH-CACHE-PROTOCOL.md` with the new memory-based research cache (it still documents the legacy `.taskmaster/docs/research/` structure)
 
 ---
 

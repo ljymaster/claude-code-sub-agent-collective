@@ -112,6 +112,10 @@ your-project/
 5. **Refactoring** - clean up while keeping tests green
 6. **Delivery** - you see what tests were added and results
 
+## Why determinism matters
+
+Traditional LLM workflows rely on agents “probably” following instructions. The collective shifts enforcement into deterministic hooks and filesystem markers, so progress literally cannot continue unless preconditions are satisfied. All state lives in `.claude/memory/`, making workflows auditable, restartable, and inspectable at any point. The layered gates—task structure, hook checks, and logging—eliminate agent drift and keep TDD, validation, and optional browser testing on rails regardless of model variability. It’s a step toward reliable automation: the language model decides *what* to do, while the operating system decides *whether* it’s allowed.
+
 ### The TDD contract every agent follows
 
 ```
