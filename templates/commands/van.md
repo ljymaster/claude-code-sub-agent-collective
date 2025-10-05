@@ -22,44 +22,52 @@ When user provides a request, you automatically execute this workflow combining 
 
 ### STEP 0: Preflight Configuration
 
-Conduct this interactive configuration (like spec-kit /clarify pattern):
+**Check:** If `.claude/memory/.preflight-done` exists, skip this step entirely.
+
+**If not exists, conduct interactive configuration using sequential questioning loop:**
+
+**Sequential questioning loop (interactive):**
+
+- Present EXACTLY ONE question at a time.
+- After the user answers, validate the answer and record it in working memory.
+- Move to the next question.
+- Stop when all questions answered.
 
 **Question 1:**
-Ask: "📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research. (y/n)"
+"📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research."
 
-Wait for user response (they will reply "y" or "n")
+| Option | Description |
+|--------|-------------|
+| y | Enable logging |
+| n | Disable logging |
 
-**ACTION the response immediately:**
-```bash
-mkdir -p .claude/memory
-if [[ response == y ]]; then
-  echo '{"loggingEnabled": true}' > .claude/memory/config.json
-  touch .claude/memory/.logging-enabled
-else
-  echo '{"loggingEnabled": false}' > .claude/memory/config.json
-fi
-```
+After user answers, record answer in working memory as `LOGGING_ANSWER`.
 
 **Question 2:**
-Ask: "🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps. (y/n)"
+"🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps."
 
-Wait for user response (they will reply "y" or "n")
+| Option | Description |
+|--------|-------------|
+| y | Enable browser testing |
+| n | Disable browser testing |
 
-**ACTION the response immediately:**
+After user answers, record answer in working memory as `BROWSER_ANSWER`.
+
+**After both questions answered:**
+
+Execute preflight script with collected answers:
 ```bash
-# Read existing config and add browserTesting
-jq --arg bt "$([ response == y ] && echo true || echo false)" \
-  '. + {browserTesting: ($bt == "true")}' \
-  .claude/memory/config.json > .claude/memory/config.json.tmp
-mv .claude/memory/config.json.tmp .claude/memory/config.json
+./.claude/memory/lib/preflight.sh '{"logging":"LOGGING_ANSWER","browserTesting":"BROWSER_ANSWER","prdPath":""}'
 ```
 
-**Complete configuration:**
-```bash
-touch .claude/memory/.preflight-done
+Read JSON output and confirm:
 ```
+✅ Configuration saved
+- Logging: [enabled/disabled]
+- Browser Testing: [enabled/disabled]
 
-Report: "✅ Configuration saved. Ready to proceed."
+Ready to proceed.
+```
 
 ---
 

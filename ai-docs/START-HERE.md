@@ -59,6 +59,12 @@
    - **Why Read**: Understand how to add rich context while keeping deterministic enforcement
    - **Key Sections**: Phase artifacts, data models, parallel tasks, minimal context templates
 
+### 10. **Spec-Kit-Command-Analysis.md** - Command/Script Improvements ⭐
+   - **What**: Analysis of GitHub spec-kit command/script architecture patterns
+   - **Why Read**: Identifies specific improvements for our command system
+   - **Key Sections**: Command/script separation, clarification pattern, constitution.md, actionable roadmap
+   - **Impact**: 3 high-priority improvements (6-9 hours total) to adopt before v3.0
+
 ---
 
 ## Supporting Documentation
@@ -99,13 +105,15 @@
 2. **Read #6-7** - Critical gap found and remediation plan
 3. **Read #8** - External systems research (BMAD-METHOD + spec-kit analysis)
 4. **Read #9** - Phase 0.6 context enrichment plan (optional but valuable)
-5. **Focus on #7 (Phase-0.5-Implementation-Plan.md)** - Required before Phase 1
-6. **Consider #9 (Phase-0.6-Implementation-Plan.md)** - Optional enhancement for rich context
-7. Don't get confused by supporting docs (they're reference only)
-8. Re-read determinism rule in `CLAUDE.md` before editing any command or agent instructions (hooks enforce logic, instructions stay declarative)
-9. Review current `/van` preflight flow in `templates/commands/van.md` so Phase 0.5 questions extend the existing baseline instead of replacing it
-10. Flag remaining `.taskmaster` references in `templates/agents/prd-parser-agent.md` and `templates/agents/research-agent.md`—Phase 0.5 must migrate these to the new `.claude/memory/` layout
-11. Align `templates/docs/RESEARCH-CACHE-PROTOCOL.md` with the new memory-based research cache (it still documents the legacy `.taskmaster/docs/research/` structure)
+5. **Read #10** - Spec-kit command/script improvements (high-impact patterns)
+6. **Focus on #7 (Phase-0.5-Implementation-Plan.md)** - Required before Phase 1
+7. **Consider #9 (Phase-0.6-Implementation-Plan.md)** - Optional enhancement for rich context
+8. **Consider #10 improvements** - Script extraction, constitution.md, /van clarify (6-9 hours)
+9. Don't get confused by supporting docs (they're reference only)
+10. Re-read determinism rule in `CLAUDE.md` before editing any command or agent instructions (hooks enforce logic, instructions stay declarative)
+11. Review current `/van` preflight flow in `templates/commands/van.md` so Phase 0.5 questions extend the existing baseline instead of replacing it
+12. Flag remaining `.taskmaster` references in `templates/agents/prd-parser-agent.md` and `templates/agents/research-agent.md`—Phase 0.5 must migrate these to the new `.claude/memory/` layout
+13. Align `templates/docs/RESEARCH-CACHE-PROTOCOL.md` with the new memory-based research cache (it still documents the legacy `.taskmaster/docs/research/` structure)
 
 ---
 
