@@ -73,13 +73,13 @@ Ready to proceed.
 
 ### STEP 1: Create Task Hierarchy with TDD Structure
 
-Deploy `@task-breakdown-agent` to parse the user's request into WBS hierarchy and save to `.claude/memory/task-index.json`.
+**ACTION:** Deploy `@task-breakdown-agent` via Task tool with the user's actual request.
 
-**CRITICAL: For each implementation task, create TWO subtasks:**
-1. Test task (deploys @test-first-agent)
-2. Implementation task (depends on test task, deploys implementation agent)
+The agent will parse the request and create task-index.json.
 
-**Example structure:**
+**NOTE:** Do NOT create tasks yourself. Do NOT use the example below as the actual output. The agent creates tasks based on the ACTUAL user request, not the example.
+
+**For reference only, here is an example structure for a hypothetical "Login Form" request (this is NOT your actual task):**
 ```json
 {
   "version": "1.0.0",
@@ -141,7 +141,7 @@ Deploy `@task-breakdown-agent` to parse the user's request into WBS hierarchy an
 
 Use the tree format from van-output-template.md (📋 WBS Hierarchy section). This gives users visibility into the plan before execution starts.
 
-**Example display:**
+**For reference only, here is an example display format for a hypothetical "Todo App" request (use this FORMAT but with the ACTUAL task data you just read from task-index.json):**
 ```
 📋 WBS Hierarchy (3 features, 6 tasks):
 
@@ -159,41 +159,32 @@ Epic 1: Todo Application
 Starting execution...
 ```
 
+**Display the ACTUAL hierarchy from task-index.json using this tree format, NOT the example above.**
+
 ### STEP 2: Find Next Available Task
 
+**ACTION:** Read task-index.json and find the first pending leaf task with satisfied dependencies.
+
+A leaf task has no children. Dependencies are satisfied when all dependency task IDs have status="done".
+
+**For reference only, here is example logic (do NOT execute this bash literally - just understand the concept and find the task):**
 ```bash
-# Source helpers
-source .claude/memory/lib/wbs-helpers.sh
-
-# Get leaf tasks (no children)
-leaf_tasks=$(get_leaf_tasks)
-
-# Find first pending leaf task with satisfied dependencies
-next_task=$(jq -r '.tasks[] |
-  select(.children == [] or .children == null) |
-  select(.status == "pending") |
-  select(
-    (.dependencies // []) as $deps |
-    all($deps[]; . as $dep |
-      any($tasks[]; .id == $dep and .status == "done")
-    )
-  ) |
-  .id' .claude/memory/task-index.json | head -1)
+# Example logic showing WHAT to look for:
+# - Task with no children
+# - Status is "pending"
+# - All dependencies have status="done"
 ```
 
 ### STEP 3: Deploy Agent for Task
 
-Use Task tool to deploy the agent specified in the task's "agent" field:
+**ACTION:** Use the Task tool to deploy the agent specified in that task's "agent" field.
 
+**For reference only, here is an example (deploy the ACTUAL agent from the ACTUAL task you found, not this example):**
 ```
-Deploy @test-first-agent via Task tool for task 1.1.1
+Example: Deploy @test-first-agent via Task tool for task 1.1.1
 ```
 
-**PreToolUse(Task) hook automatically:**
-- Checks if 1.1.1 is a leaf task (no children) → YES
-- Checks if dependencies satisfied → YES (none for test tasks)
-- Logs decision to hooks.jsonl
-- Allows or BLOCKS deployment
+The PreToolUse hook will automatically validate and ALLOW or DENY deployment.
 
 ### STEP 4: Agent Executes
 
