@@ -1,6 +1,6 @@
 {
   "name": "claude-code-collective",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "Sub-agent collective framework for Claude Code leveraging native Claude 4.5 features with TDD enforcement, quality gates, and research-driven development",
   "main": "lib/index.js",
   "bin": {
