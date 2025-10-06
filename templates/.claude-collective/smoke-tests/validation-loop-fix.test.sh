@@ -63,8 +63,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: subagent_type extraction allows tdd-validation-agent ... "
 if [[ "$DECISION" == "allow" ]] && [[ ! -f "$MARKERS_DIR/.needs-validation-1.1" ]]; then
@@ -95,8 +95,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Wrong agent blocked by validation marker ... "
 if [[ "$DECISION" == "deny" ]] && [[ -f "$MARKERS_DIR/.needs-validation-1.1" ]]; then
@@ -123,8 +123,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Description field extraction works ... "
 if [[ "$DECISION" == "allow" ]] && [[ ! -f "$MARKERS_DIR/.needs-validation-1.1" ]]; then
@@ -152,8 +152,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: @ symbol extraction works ... "
 if [[ "$DECISION" == "allow" ]] && [[ ! -f "$MARKERS_DIR/.needs-validation-1.1" ]]; then
@@ -183,8 +183,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Deliverables validation agent allowed ... "
 if [[ "$DECISION" == "allow" ]] && [[ ! -f "$MARKERS_DIR/.needs-deliverables-validation-1.1" ]]; then
@@ -212,8 +212,8 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)
-DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: No agent extraction allows operation ... "
 if [[ "$DECISION" == "allow" ]] || [[ -z "$DECISION" ]]; then
