@@ -84,6 +84,39 @@ JSON
   fi
 fi
 
+# Check for deliverables validation markers (Deliverables validation required)
+if ls "$MARKERS_DIR"/.needs-deliverables-validation-* 1>/dev/null 2>&1; then
+  MARKER_FILE=$(ls "$MARKERS_DIR"/.needs-deliverables-validation-* | head -1)
+  FEATURE_ID=$(basename "$MARKER_FILE" | sed 's/^\.needs-deliverables-validation-//')
+
+  if [[ "$REQUESTED_AGENT" == "deliverables-validation-agent" ]]; then
+    # Correct agent - remove marker and allow
+    rm "$MARKER_FILE"
+    log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "allow" \
+      "Deliverables validation agent deployed - marker removed" \
+      "{\"deliverablesValidationAgentDeployed\":true,\"featureId\":\"$FEATURE_ID\"}"
+    cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Deliverables validation agent deployed - marker removed"}}
+JSON
+    exit 0
+  else
+    # Wrong agent - block deployment
+    log_hook_event "PreToolUse" "Task" "$FEATURE_ID" "deny" \
+      "Deliverables validation required before proceeding" \
+      "{\"blockedAgent\":\"$REQUESTED_AGENT\",\"requiredAgent\":\"deliverables-validation-agent\",\"featureId\":\"$FEATURE_ID\"}"
+
+    cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"⚠️ TASK BLOCKED - Feature $FEATURE_ID deliverables validation required
+
+REQUIRED ACTION:
+Deploy @deliverables-validation-agent for feature $FEATURE_ID via Task tool
+
+The marker .needs-deliverables-validation-$FEATURE_ID blocks all other agent deployments."}}
+JSON
+    exit 2
+  fi
+fi
+
 # Check for browser testing markers (Browser validation required)
 if ls "$MARKERS_DIR"/.needs-browser-testing-* 1>/dev/null 2>&1; then
   MARKER_FILE=$(ls "$MARKERS_DIR"/.needs-browser-testing-* | head -1)

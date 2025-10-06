@@ -162,14 +162,15 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
       log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Sibling check: ALL_DONE=$ALL_DONE" "{\"allDone\":\"$ALL_DONE\"}" || true
 
       if [[ "$ALL_DONE" -eq 0 ]]; then
-        log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Creating marker for $PARENT_ID" "{}" || true
-        # Feature complete - create validation marker
+        log_hook_event "SubagentStop" "" "$TASK_ID" "allow" "DEBUG: Creating markers for $PARENT_ID" "{}" || true
+        # Feature complete - create validation markers
         mkdir -p "$MEMORY_DIR/markers" 2>&1 || true
         touch "$MEMORY_DIR/markers/.needs-validation-${PARENT_ID}" 2>&1 || true
+        touch "$MEMORY_DIR/markers/.needs-deliverables-validation-${PARENT_ID}" 2>&1 || true
 
         log_hook_event "SubagentStop" "" "$TASK_ID" "allow" \
-          "Feature $PARENT_ID complete - validation required" \
-          "{\"testsPass\":$tests_pass,\"deliverablesExist\":$deliverables_exist,\"validationMarkerCreated\":true,\"featureId\":\"$PARENT_ID\"}"
+          "Feature $PARENT_ID complete - validation and deliverables validation required" \
+          "{\"testsPass\":$tests_pass,\"deliverablesExist\":$deliverables_exist,\"validationMarkerCreated\":true,\"deliverablesMarkerCreated\":true,\"featureId\":\"$PARENT_ID\"}"
       fi
     fi
   fi

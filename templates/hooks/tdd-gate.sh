@@ -80,31 +80,6 @@ if [[ -f "$TASK_INDEX" ]]; then
     IN_PROGRESS_TASK=$(jq -r '.tasks[] | select(.status=="in-progress") | .id' "$TASK_INDEX" 2>/dev/null | head -1)
 
     if [[ -n "$IN_PROGRESS_TASK" ]]; then
-        # Check if file is explicitly listed as deliverable
-        TASK_HAS_FILE=$(jq -r --arg file "$FILE_PATH" --arg taskid "$IN_PROGRESS_TASK" '.tasks[] | select(.id == $taskid) | .deliverables[]? // empty | select(. == $file)' "$TASK_INDEX" 2>/dev/null)
-
-        # Check if file is "related" to deliverables (same base name or directory)
-        DELIVERABLE_FILES=$(jq -r --arg taskid "$IN_PROGRESS_TASK" '.tasks[] | select(.id == $taskid) | .deliverables[]? // empty' "$TASK_INDEX" 2>/dev/null)
-        FILE_RELATED=false
-
-        for deliverable in $DELIVERABLE_FILES; do
-            DELIVERABLE_BASE=$(basename "$deliverable" | sed 's/\.[^.]*$//')
-            FILE_BASE_CHECK=$(basename "$FILE_PATH" | sed 's/\.[^.]*$//')
-            DELIVERABLE_DIR=$(dirname "$deliverable")
-            FILE_DIR=$(dirname "$FILE_PATH")
-
-            # Allow if same base name (e.g., index.html + style.css related to index.html)
-            # OR same directory (e.g., src/App.js related to src/index.html)
-            # OR CSS/assets for HTML deliverables
-            if [[ "$FILE_PATH" =~ \.css$|\.scss$|\.sass$ ]] && [[ "$deliverable" =~ \.html$|\.jsx$|\.tsx$ ]]; then
-                FILE_RELATED=true
-                break
-            elif [[ "$FILE_DIR" == "$DELIVERABLE_DIR" ]]; then
-                FILE_RELATED=true
-                break
-            fi
-        done
-
         # Get task dependencies (test tasks)
         DEPENDENCIES=$(jq -r --arg taskid "$IN_PROGRESS_TASK" '.tasks[] | select(.id == $taskid) | .dependencies[]? // empty' "$TASK_INDEX" 2>/dev/null)
 
@@ -124,15 +99,10 @@ if [[ -f "$TASK_INDEX" ]]; then
             done
 
             if [[ "$ALL_DEPS_DONE" = true ]]; then
-                # All dependencies complete - allow if file in deliverables OR related
-                if [[ -n "$TASK_HAS_FILE" ]] || [[ "$FILE_RELATED" = true ]]; then
-                    TEST_FOUND=true
-                    if [[ -n "$TASK_HAS_FILE" ]]; then
-                        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: File in deliverables, dependencies complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
-                    else
-                        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Related file, dependencies complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"relatedTo\":\"deliverables\"}"
-                    fi
-                fi
+                # All dependencies complete - allow file creation
+                # Deliverables validation happens at feature completion via deliverables-validation-agent
+                TEST_FOUND=true
+                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Dependencies complete, allowing file (validated at completion)" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
             else
                 # Dependencies not complete - deny
                 log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task dependencies not complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"incompleteDeps\":\"$INCOMPLETE_DEPS\"}"
