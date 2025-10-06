@@ -45,19 +45,32 @@ When enabled, the system automatically:
 - UI concepts: `ui`, `interface`, `dashboard`, `page`, `layout`, `responsive`
 - User actions: `login`, `signup`, `authentication`, `interactive`
 
-**Workflow** (Hook-Enforced, 100% Deterministic):
+**Workflow** (3-Gate System, Hook-Enforced, 100% Deterministic):
 ```
 1. task-breakdown-agent detects UI → shows browser testing notification
 2. component-implementation-agent completes feature tasks
-3. SubagentStop hook creates .needs-validation-{FEATURE_ID} marker
+3. SubagentStop hook creates TWO markers:
+   - .needs-validation-{FEATURE_ID}
+   - .needs-deliverables-validation-{FEATURE_ID}
+
+GATE 1: TDD Validation
 4. PreToolUse hook BLOCKS all agent deployments except tdd-validation-agent
-5. tdd-validation-agent scans code for UI → creates .needs-browser-testing-{FEATURE_ID} marker
-6. PreToolUse hook BLOCKS all agent deployments except chrome-devtools-testing-agent (if browserTesting=true)
-7. chrome-devtools-testing-agent validates in browser → verifies CSS + interactions
+5. tdd-validation-agent runs tests → creates .needs-browser-testing-{FEATURE_ID} if UI detected
+
+GATE 2: Deliverables Validation
+6. PreToolUse hook BLOCKS all agent deployments except deliverables-validation-agent
+7. deliverables-validation-agent validates files → adds CSS/assets to deliverables
+
+GATE 3: Browser Testing (if UI detected + browserTesting=true)
+8. PreToolUse hook BLOCKS all agent deployments except chrome-devtools-testing-agent
+9. chrome-devtools-testing-agent validates in browser → verifies CSS + interactions
 ```
 
 **Enforcement Mechanism**:
-- Physical marker files (.needs-validation-*, .needs-browser-testing-*) block workflow
+- Physical marker files block workflow:
+  - `.needs-validation-*` → TDD validation required (Gate 1)
+  - `.needs-deliverables-validation-*` → File validation required (Gate 2)
+  - `.needs-browser-testing-*` → Browser testing required (Gate 3, if UI detected)
 - Hub Claude has NO CHOICE - hooks physically prevent skipping validation
 - NOT based on LLM decisions or agent suggestions
 - 100% deterministic - same config = same behavior every time
@@ -343,29 +356,46 @@ Tasks are automatically assigned to specialist agents based on type:
 
 ---
 
-### Marker-Based Validation Enforcement
+### Marker-Based Validation Enforcement (3-Gate System)
 
 **How It Works**:
 
 1. **Feature Completion Detection**:
    - SubagentStop hook checks if last task in feature just completed
-   - Creates `.claude/memory/markers/.needs-validation-{FEATURE_ID}` file
-   - This marker is a physical file that blocks workflow
+   - Creates TWO marker files:
+     - `.claude/memory/markers/.needs-validation-{FEATURE_ID}` → TDD validation required
+     - `.claude/memory/markers/.needs-deliverables-validation-{FEATURE_ID}` → File validation required
+   - These markers are physical files that block workflow
 
-2. **Validation Agent Enforcement**:
+2. **Gate 1: TDD Validation Agent Enforcement**:
    - PreToolUse hook checks for `.needs-validation-*` markers before deploying agents
    - If marker exists AND agent != tdd-validation-agent: DENY deployment
    - If marker exists AND agent == tdd-validation-agent: ALLOW + remove marker
-   - Hub Claude physically cannot skip validation
+   - Hub Claude physically cannot skip TDD validation
 
-3. **Browser Testing Enforcement** (if browserTesting=true):
+3. **Gate 2: Deliverables Validation Agent Enforcement**:
+   - PreToolUse hook checks for `.needs-deliverables-validation-*` markers
+   - If marker exists AND agent != deliverables-validation-agent: DENY deployment
+   - If marker exists AND agent == deliverables-validation-agent: ALLOW + remove marker
+   - **What deliverables-validation-agent does**:
+     - Scans filesystem for all files created during feature
+     - Validates expected deliverables exist (from task-index.json)
+     - **Intelligently categorizes additional files**:
+       - CSS for HTML/JSX/TSX → Adds to deliverables ✅
+       - Assets in same directory → Adds to deliverables ✅
+       - Unrelated files (different directory tree) → Reports error ❌
+       - Config/test files → Skips (handled by other gates)
+     - Updates task-index.json deliverables array with related files
+   - Hub Claude physically cannot skip deliverables validation
+
+4. **Gate 3: Browser Testing Enforcement** (if browserTesting=true):
    - tdd-validation-agent scans code for UI elements (`<form>`, event handlers, etc.)
    - If UI detected: creates `.needs-browser-testing-{FEATURE_ID}` marker
    - PreToolUse hook checks for browser testing marker
    - If marker exists AND agent != chrome-devtools-testing-agent: DENY deployment
    - If marker exists AND agent == chrome-devtools-testing-agent: ALLOW + remove marker
 
-**Result**: 100% deterministic validation enforcement. No LLM decision-making. Physical file gates.
+**Result**: 100% deterministic 3-gate validation enforcement. No LLM decision-making. Physical file gates.
 
 ---
 

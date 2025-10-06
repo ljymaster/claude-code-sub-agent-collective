@@ -11,6 +11,9 @@
 - **@quality-agent** - Code review, security analysis, compliance validation
 - **@devops-agent** - Deployment, CI/CD, infrastructure management
 - **@functional-testing-agent** - Real browser testing with Playwright validation
+- **@tdd-validation-agent** - Validates tests pass, detects UI for browser testing (Gate 1)
+- **@deliverables-validation-agent** - Validates files created, adds related files like CSS/assets (Gate 2)
+- **@chrome-devtools-testing-agent** - Browser interaction testing via Chrome DevTools MCP (Gate 3)
 
 ## 💻 RESEARCH & COORDINATION
 - **@research-agent** - Context7-powered technical research and documentation

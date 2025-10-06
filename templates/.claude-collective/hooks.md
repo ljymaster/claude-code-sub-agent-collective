@@ -65,21 +65,24 @@ if [[ "$AGENT" =~ -implementation-agent$ ]]; then
 
   # If all sibling tasks done, feature is complete
   if [[ "$ALL_DONE" -eq 0 ]]; then
-    # Create validation marker
+    # Create TWO validation markers (3-gate system)
     touch ".claude/memory/markers/.needs-validation-${PARENT_ID}"
+    touch ".claude/memory/markers/.needs-deliverables-validation-${PARENT_ID}"
   fi
 fi
 ```
 
-**Result**: Physical marker file created at `.claude/memory/markers/.needs-validation-{FEATURE_ID}`
+**Result**: TWO physical marker files created:
+- `.claude/memory/markers/.needs-validation-{FEATURE_ID}` → TDD validation required
+- `.claude/memory/markers/.needs-deliverables-validation-{FEATURE_ID}` → File validation required
 
-#### 2. Validation Agent Enforcement
+#### 2. Gate 1: TDD Validation Agent Enforcement
 
-**When**: PreToolUse hook runs before deploying any agent
+**When**: PreToolUse hook runs before deploying any agent (Gate 1 of 3)
 
 **Logic**:
 ```bash
-# Check for validation markers
+# Check for TDD validation markers
 if ls .claude/memory/markers/.needs-validation-* 2>/dev/null; then
   MARKER_FILE=$(ls .claude/memory/markers/.needs-validation-* | head -1)
   FEATURE_ID=$(basename "$MARKER_FILE" | sed 's/^\.needs-validation-//')
@@ -94,16 +97,57 @@ if ls .claude/memory/markers/.needs-validation-* 2>/dev/null; then
   else
     # Wrong agent - block deployment
     cat <<JSON
-{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"Feature $FEATURE_ID requires validation. MUST deploy @tdd-validation-agent before proceeding."}}
+{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"⚠️ GATE 1 BLOCKED: Feature $FEATURE_ID requires TDD validation. MUST deploy @tdd-validation-agent before proceeding."}}
 JSON
     exit 2  # DENY
   fi
 fi
 ```
 
-**Result**: Hub Claude CANNOT deploy next task's agent until tdd-validation-agent deployed
+**Result**: Hub Claude CANNOT proceed until tdd-validation-agent validates tests pass
 
-#### 3. Browser Testing Enforcement
+#### 3. Gate 2: Deliverables Validation Agent Enforcement
+
+**When**: PreToolUse hook runs after TDD validation completes (Gate 2 of 3)
+
+**Logic**:
+```bash
+# Check for deliverables validation markers
+if ls .claude/memory/markers/.needs-deliverables-validation-* 2>/dev/null; then
+  MARKER_FILE=$(ls .claude/memory/markers/.needs-deliverables-validation-* | head -1)
+  FEATURE_ID=$(basename "$MARKER_FILE" | sed 's/^\.needs-deliverables-validation-//')
+
+  # Extract requested agent from prompt
+  REQUESTED_AGENT=$(echo "$PROMPT" | grep -oP '@\K[a-z-]+-agent')
+
+  if [[ "$REQUESTED_AGENT" == "deliverables-validation-agent" ]]; then
+    # Correct agent - remove marker and allow
+    rm "$MARKER_FILE"
+    exit 0  # ALLOW
+  else
+    # Wrong agent - block deployment
+    cat <<JSON
+{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"⚠️ GATE 2 BLOCKED: Feature $FEATURE_ID requires deliverables validation. MUST deploy @deliverables-validation-agent before proceeding."}}
+JSON
+    exit 2  # DENY
+  fi
+fi
+```
+
+**What deliverables-validation-agent does**:
+- Scans filesystem for all files created during feature
+- Validates expected deliverables exist (from task-index.json)
+- **Intelligently categorizes additional files**:
+  - CSS for HTML/JSX/TSX → Adds to deliverables ✅
+  - Assets in same directory → Adds to deliverables ✅
+  - Unrelated files (different directory tree) → Reports error ❌
+  - Config/test files → Skips (handled by other gates)
+- Updates task-index.json deliverables array with related files
+- Ensures deliverables accurately reflect what was created
+
+**Result**: Hub Claude CANNOT proceed until deliverables-validation-agent validates files
+
+#### 4. Gate 3: Browser Testing Enforcement
 
 **When**: After tdd-validation-agent completes
 
@@ -161,14 +205,29 @@ fi
 - ✅ No LLM interpretation or decision-making
 - ✅ Same config = same behavior every time
 
-**Enforcement Chain**:
+**3-Gate Enforcement Chain**:
 ```
 Feature completes
-  → SubagentStop creates marker
-  → PreToolUse blocks all agents except validation agent
-  → Hub Claude has NO CHOICE (physical file blocks workflow)
-  → Must deploy validation agent to remove marker
-  → Workflow continues
+  → SubagentStop creates TWO markers (.needs-validation-*, .needs-deliverables-validation-*)
+
+GATE 1: TDD Validation
+  → PreToolUse blocks all agents except tdd-validation-agent
+  → Hub deploys tdd-validation-agent (runs tests)
+  → Marker removed when tests pass
+  → Workflow proceeds to Gate 2
+
+GATE 2: Deliverables Validation
+  → PreToolUse blocks all agents except deliverables-validation-agent
+  → Hub deploys deliverables-validation-agent (validates files, adds CSS/assets)
+  → Marker removed when deliverables validated
+  → Workflow proceeds to Gate 3 (if UI detected)
+
+GATE 3: Browser Testing (if UI detected + browserTesting=true)
+  → tdd-validation-agent creates .needs-browser-testing-* marker
+  → PreToolUse blocks all agents except chrome-devtools-testing-agent
+  → Hub deploys chrome-devtools-testing-agent (tests interactions)
+  → Marker removed when browser tests pass
+  → Workflow continues to next feature
 ```
 
 **Cannot Be Bypassed**:
@@ -199,11 +258,16 @@ Feature completes
 - **Integration**: Hook runs tests, checks deliverables, creates markers
 - **Result**: Impossible to complete without passing tests
 
-### Validation Agent Enforcement
+### 3-Gate Validation Enforcement
 - **Hook**: `pre-agent-deploy.sh` (PreToolUse on Task)
-- **Agents**: tdd-validation-agent, chrome-devtools-testing-agent
-- **Integration**: Hook creates/checks marker files
-- **Result**: Impossible to skip validation when required
+- **Agents**: tdd-validation-agent, deliverables-validation-agent, chrome-devtools-testing-agent
+- **Integration**: Hook creates/checks marker files for 3-gate sequence
+- **Result**: Impossible to skip any validation gate when required
+
+**Gate Sequence**:
+1. **Gate 1 (TDD)**: tdd-validation-agent validates tests pass
+2. **Gate 2 (Deliverables)**: deliverables-validation-agent validates files + adds related files (CSS, assets)
+3. **Gate 3 (Browser)**: chrome-devtools-testing-agent validates UI interactions (if UI detected + browserTesting=true)
 
 ---
 
@@ -221,6 +285,9 @@ cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.decision=="deny")'
 # View validation markers created
 cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.reason | contains("validation required"))'
 
+# View deliverables validation enforcement
+cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.reason | contains("deliverables validation"))'
+
 # View browser testing enforcement
 cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.reason | contains("browser testing"))'
 ```
@@ -228,19 +295,32 @@ cat .claude/memory/logs/current/hooks.jsonl | jq 'select(.reason | contains("bro
 ### Manual Hook Testing
 
 ```bash
-# Test validation marker creation (simulate feature completion)
+# Test 3-gate validation sequence
+
+# GATE 1: TDD Validation
 mkdir -p .claude/memory/markers
 touch .claude/memory/markers/.needs-validation-1.1
+touch .claude/memory/markers/.needs-deliverables-validation-1.1
 
-# Test PreToolUse blocking
+# Test PreToolUse blocks wrong agent
 echo '{"tool_name": "Task", "tool_input": {"prompt": "Deploy @component-implementation-agent for task 1.2.1"}}' | ./.claude/hooks/pre-agent-deploy.sh
+# Expected: DENY with "⚠️ GATE 1 BLOCKED: Feature 1.1 requires TDD validation"
 
-# Expected: DENY with "Feature 1.1 requires validation"
-
-# Test validation agent allowed
+# Test tdd-validation-agent allowed
 echo '{"tool_name": "Task", "tool_input": {"prompt": "Deploy @tdd-validation-agent for feature 1.1"}}' | ./.claude/hooks/pre-agent-deploy.sh
+# Expected: ALLOW (TDD marker removed, deliverables marker remains)
 
-# Expected: ALLOW (marker removed)
+# GATE 2: Deliverables Validation
+# Test deliverables-validation-agent allowed
+echo '{"tool_name": "Task", "tool_input": {"prompt": "Deploy @deliverables-validation-agent for feature 1.1"}}' | ./.claude/hooks/pre-agent-deploy.sh
+# Expected: ALLOW (deliverables marker removed)
+
+# GATE 3: Browser Testing (if UI detected)
+touch .claude/memory/markers/.needs-browser-testing-1.1
+
+# Test chrome-devtools-testing-agent allowed
+echo '{"tool_name": "Task", "tool_input": {"prompt": "Deploy @chrome-devtools-testing-agent for feature 1.1"}}' | ./.claude/hooks/pre-agent-deploy.sh
+# Expected: ALLOW (browser marker removed)
 ```
 
 ---
@@ -251,9 +331,12 @@ echo '{"tool_name": "Task", "tool_input": {"prompt": "Deploy @tdd-validation-age
 - ✅ 100% deterministic workflow enforcement
 - ✅ Physical file gates (cannot be bypassed)
 - ✅ Test-first methodology (enforced)
-- ✅ Validation requirements (enforced)
-- ✅ Browser testing (enforced when enabled)
+- ✅ 3-gate validation sequence (TDD → Deliverables → Browser)
+- ✅ Intelligent file analysis via agents (not hook heuristics)
+- ✅ Browser testing (enforced when enabled + UI detected)
 - ✅ Complete audit trail (optional logging)
 - ✅ No LLM decision-making in enforcement
 
 **Agents follow hooks, not the other way around.**
+
+**Philosophy**: Hooks are guard rails that redirect, agents make intelligent decisions.
