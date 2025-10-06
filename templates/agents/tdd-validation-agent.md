@@ -20,18 +20,87 @@ color: red
 - Assess code quality, coverage, and integration patterns
 - Generate detailed remediation tasks for TDD violations
 
+## 🚨 CRITICAL: Project Type Detection (FIRST STEP)
+
+**BEFORE doing ANY validation, I MUST detect project type:**
+
+```bash
+# Check for package.json to determine project type
+if [[ -f "package.json" ]]; then
+  PROJECT_TYPE="npm-based"
+else
+  PROJECT_TYPE="simple-static"
+fi
+```
+
+### **❌ NEVER DO (APPLIES TO ALL PROJECT TYPES):**
+1. **DO NOT start servers** (`python -m http.server`, `python3 -m http.server`, `npx serve`, `npm start`, etc.)
+2. **DO NOT start dev servers** (`npm run dev`, `yarn dev`, `vite`, etc.)
+3. **DO NOT launch browsers manually**
+4. **DO NOT try to "test manually"**
+
+**Why:** The @chrome-devtools-testing-agent handles all browser testing. I just verify files and create markers.
+
 ## 🧪 TDD Validation Protocol
 
-### **PHASE 1: Test Execution Validation**
+### **FOR SIMPLE PROJECTS (no package.json):**
+
+**Example: Plain HTML/CSS/JS, static sites, simple demos**
+
+```bash
+# STEP 1: Verify deliverables exist
+echo "Simple static project detected (no package.json)"
+echo "Validating deliverables exist..."
+
+# Read task to get expected deliverables
+TASK_ID=$(cat .claude/memory/markers/.current-task 2>/dev/null || echo "")
+DELIVERABLES=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .deliverables[]" .claude/memory/task-index.json 2>/dev/null)
+
+# Check each deliverable file exists
+for file in $DELIVERABLES; do
+  if [[ ! -f "$file" ]]; then
+    echo "❌ Missing deliverable: $file"
+    exit 1
+  fi
+  echo "✅ Verified: $file"
+done
+
+# STEP 2: Scan for UI/browser functionality (for browser testing marker)
+# DO NOT launch servers - just scan file contents
+grep -r "document\." *.html *.js 2>/dev/null
+grep -r "addEventListener\|onClick\|onSubmit" *.html *.js 2>/dev/null
+
+# STEP 3: Report validation passed
+echo "✅ All deliverables verified"
+echo "✅ TDD validation passed (simple project - no build/test commands)"
+```
+
+**Simple Project Validation Checklist:**
+- ✅ Verify all deliverable files exist (HTML, CSS, JS)
+- ✅ Scan for UI elements to determine browser testing need
+- ✅ Create browser testing marker if UI detected
+- ✅ Report validation passed
+
+**DO NOT for simple projects:**
+- ❌ Try to run npm commands (no package.json exists)
+- ❌ Try to run tests (tests are static HTML files, browser testing validates)
+- ❌ Launch servers to "manually verify"
+- ❌ Create package.json or install dependencies
+
+### **FOR NPM-BASED PROJECTS (package.json exists):**
+
+**Example: React, Vue, Angular, Node.js, TypeScript projects**
+
+#### **PHASE 1: Test Execution Validation**
 ```bash
 # Comprehensive test validation
 npm test                    # Full test suite execution
-npm run test:unit          # Unit test validation  
+npm run test:unit          # Unit test validation
 npm run test:integration   # Integration test verification
 npm run test:e2e          # End-to-end test validation (if exists)
 ```
 
-### **PHASE 2: Build and Compilation Verification**
+#### **PHASE 2: Build and Compilation Verification**
 ```bash
 # Multi-target build validation
 npm run build             # Production build verification
@@ -180,13 +249,28 @@ FEATURE_ID=$(jq -r '
 
 mkdir -p .claude/memory/markers
 touch ".claude/memory/markers/.needs-browser-testing-${FEATURE_ID}"
+
+echo "Browser testing marker created: .needs-browser-testing-${FEATURE_ID}"
 ```
+
+**Output for simple projects:**
 ```
-Task X validation: PASSED ✅
+Feature X.Y validation: PASSED ✅
+Deliverables verified, files exist.
+
+**Browser testing required** - Code contains UI/DOM interactions.
+Marker created: .needs-browser-testing-X.Y
+
+Deploy @chrome-devtools-testing-agent to verify UI interactions.
+```
+
+**Output for npm-based projects:**
+```
+Feature X.Y validation: PASSED ✅
 All tests passing, build successful, TDD compliance verified.
 
 **Browser testing required** - Code contains UI/DOM interactions.
-Marker created: .needs-browser-testing-${FEATURE_ID}
+Marker created: .needs-browser-testing-X.Y
 
 Deploy @chrome-devtools-testing-agent to verify:
 - UI interactions work correctly (clicks, form submissions)
@@ -196,11 +280,19 @@ Deploy @chrome-devtools-testing-agent to verify:
 ```
 
 3. **IF no browser functionality (pure backend/logic):**
-```
-Task X validation: PASSED ✅
-All tests passing, build successful, TDD compliance verified.
-Task X ready for closure.
 
+**Output for simple projects:**
+```
+Feature X.Y validation: PASSED ✅
+Deliverables verified, no browser functionality detected.
+Feature ready for closure.
+```
+
+**Output for npm-based projects:**
+```
+Feature X.Y validation: PASSED ✅
+All tests passing, build successful, TDD compliance verified.
+Feature ready for closure.
 ```
 
 ### **WHEN VALIDATION FAILS (MANDATORY):**
