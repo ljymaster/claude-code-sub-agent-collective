@@ -90,11 +90,11 @@ test_hub_centric_language() {
 test_language "Contains hub-centric language" "pass" "test_hub_centric_language"
 
 echo ""
-echo "TEST 3: CLAUDE.md hub-and-spoke section exists"
+echo "TEST 3: .claude-collective/CLAUDE.md hub-and-spoke section exists"
 
-# Test that CLAUDE.md documents hub-and-spoke architecture
+# Test that .claude-collective/CLAUDE.md documents hub-and-spoke architecture
 test_hub_spoke_docs() {
-    local CLAUDE_MD="CLAUDE.md"
+    local CLAUDE_MD=".claude-collective/CLAUDE.md"
 
     # Should contain "hub-and-spoke" explanation
     if ! grep -qi "hub-and-spoke" "$CLAUDE_MD"; then
