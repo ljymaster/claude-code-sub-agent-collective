@@ -62,6 +62,22 @@ echo "Testing validate command:"
 npx "$PACKAGE_NAME" validate 2>&1 | head -10
 echo ""
 
+echo "🧪 Running smoke tests..."
+echo ""
+if [ -x ".claude-collective/smoke-tests/run-all.sh" ]; then
+    if ./.claude-collective/smoke-tests/run-all.sh; then
+        echo ""
+        echo "✅ All smoke tests passed!"
+    else
+        echo ""
+        echo "❌ Smoke tests failed - see output above"
+        echo "⚠️  Installation may have issues"
+    fi
+else
+    echo "⚠️  Smoke tests not found (expected at .claude-collective/smoke-tests/run-all.sh)"
+fi
+echo ""
+
 echo "✅ Installation complete!"
 echo ""
 echo "🎯 You are now in: $(pwd)"
