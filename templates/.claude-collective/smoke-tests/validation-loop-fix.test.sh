@@ -20,6 +20,29 @@ FAIL_COUNT=0
 
 # Setup
 mkdir -p "$MARKERS_DIR"
+touch "$MEMORY_DIR/.preflight-done"  # Required for hook to proceed
+
+# Create minimal task-index.json for hook validation
+cat > "$MEMORY_DIR/task-index.json" <<'EOF'
+{
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "1",
+      "type": "epic",
+      "status": "in-progress",
+      "children": ["1.1"]
+    },
+    {
+      "id": "1.1",
+      "type": "feature",
+      "status": "done",
+      "parent": "1",
+      "children": []
+    }
+  ]
+}
+EOF
 
 # TEST 1: Extract agent from subagent_type field
 echo "TEST 1: Agent extraction from subagent_type field"
