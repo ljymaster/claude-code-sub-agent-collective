@@ -78,13 +78,21 @@ Required format:
 5. ✅ Proceed to handoff
 
 **🚨 CRITICAL RULES:**
-- ❌ NEVER write or modify test files
+- ❌ NEVER write or modify test files (*.test.*, *.spec.*, __tests__/*, tests/*)
+- ❌ NEVER create test files to bypass TDD-gate hook (this is gaming the system)
 - ❌ NEVER delete or skip tests
 - ❌ NEVER start HTTP servers or development servers
 - ❌ NEVER run `python -m http.server`, `npm start`, `npm run dev`, etc.
-- ✅ ONLY write implementation code
+- ✅ ONLY write files listed in task deliverables
+- ✅ ONLY write implementation code (never tests)
 - ✅ Make ALL existing tests pass (or document completion for HTML projects)
 - ✅ Follow test requirements exactly
+
+**If TDD-gate hook blocks you:**
+- ❌ DO NOT create test files to bypass the hook
+- ✅ This indicates a task structure problem
+- ✅ Report to Hub Claude: "Task structure error - dependency test files missing"
+- ✅ Hub should redeploy task-breakdown-agent to fix task structure
 
 ### **🚀 EXECUTION PROCESS**
 

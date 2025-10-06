@@ -63,44 +63,92 @@ FILE_BASE="${FILE_NAME%.*}"
 # Look for test files matching this implementation file
 TEST_FOUND=false
 
-# Pattern 1: Same directory with .test or .spec extension
-if [[ -f "${FILE_DIR}/${FILE_BASE}.test.ts" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.test.js" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.test.tsx" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.test.jsx" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.ts" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.js" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.tsx" ]] || \
-   [[ -f "${FILE_DIR}/${FILE_BASE}.spec.jsx" ]]; then
-    TEST_FOUND=true
-fi
+# TASK-AWARE APPROACH: Check if we're in a memory-based task workflow
+TASK_INDEX="$MEMORY_DIR/task-index.json"
 
-# Pattern 2: __tests__ subdirectory
-if [[ -d "${FILE_DIR}/__tests__" ]]; then
-    if [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.ts" ]] || \
-       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.js" ]] || \
-       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.ts" ]] || \
-       [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.js" ]]; then
-        TEST_FOUND=true
+if [[ -f "$TASK_INDEX" ]]; then
+    # Find task that has this file as a deliverable
+    CURRENT_TASK=$(jq -r --arg file "$FILE_PATH" '.tasks[] | select(.deliverables[]? == $file) | .id' "$TASK_INDEX" 2>/dev/null | head -1)
+
+    if [[ -n "$CURRENT_TASK" ]]; then
+        # Task-aware: Check dependency tasks for test deliverables
+        DEPENDENCIES=$(jq -r --arg taskid "$CURRENT_TASK" '.tasks[] | select(.id == $taskid) | .dependencies[]? // empty' "$TASK_INDEX" 2>/dev/null)
+
+        if [[ -n "$DEPENDENCIES" ]]; then
+            # Check if any dependency task deliverables exist (those are the tests)
+            for dep_id in $DEPENDENCIES; do
+                TEST_DELIVERABLES=$(jq -r --arg depid "$dep_id" '.tasks[] | select(.id == $depid) | .deliverables[]?' "$TASK_INDEX" 2>/dev/null)
+
+                for test_file in $TEST_DELIVERABLES; do
+                    if [[ -f "$test_file" ]]; then
+                        TEST_FOUND=true
+                        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Tests exist from dependency task $dep_id" "{\"file\":\"$FILE_PATH\",\"testFile\":\"$test_file\",\"dependencyTask\":\"$dep_id\"}"
+                        break 2
+                    fi
+                done
+            done
+
+            # If dependencies exist but no test files found, this is a task structure problem
+            if [[ "$TEST_FOUND" = false ]]; then
+                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task structure error: Dependency task deliverables don't exist" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+                echo "{
+                    \"hookSpecificOutput\": {
+                        \"hookEventName\": \"PreToolUse\",
+                        \"permissionDecision\": \"deny\",
+                        \"permissionDecisionReason\": \"🚨 TASK STRUCTURE ERROR\\n\\nTask ${CURRENT_TASK} has dependencies but test files don't exist.\\n\\nThis indicates a problem with task breakdown, not TDD compliance.\\n\\n❌ Cannot proceed - dependency task deliverables missing\\n\\n💡 Solution: Hub Claude should redeploy task-breakdown-agent to fix task structure\"
+                    }
+                }"
+                exit 0
+            fi
+        else
+            # No dependencies = this is a test task itself, allow
+            TEST_FOUND=true
+            log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Test task (no dependencies)" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"taskType\":\"test\"}"
+        fi
     fi
 fi
 
-# Pattern 3: tests directory at project root
-if [[ -d "tests" ]]; then
-    # Find any test file containing the base name
-    if find tests -name "*${FILE_BASE}*test*" -o -name "*${FILE_BASE}*spec*" 2>/dev/null | grep -q .; then
+# FALLBACK: Pattern-based matching (for non-task workflows)
+if [[ "$TEST_FOUND" = false ]]; then
+    # Pattern 1: Same directory with .test or .spec extension
+    if [[ -f "${FILE_DIR}/${FILE_BASE}.test.ts" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.test.js" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.test.tsx" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.test.jsx" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.ts" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.js" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.tsx" ]] || \
+       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.jsx" ]]; then
         TEST_FOUND=true
     fi
-fi
 
-# Pattern 4: Check for test directory parallel to source
-if [[ "$FILE_DIR" =~ ^(src|lib)/ ]]; then
-    TEST_DIR=$(echo "$FILE_DIR" | sed 's/^src/tests/' | sed 's/^lib/tests/')
-    if [[ -f "${TEST_DIR}/${FILE_BASE}.test.ts" ]] || \
-       [[ -f "${TEST_DIR}/${FILE_BASE}.test.js" ]] || \
-       [[ -f "${TEST_DIR}/${FILE_BASE}.spec.ts" ]] || \
-       [[ -f "${TEST_DIR}/${FILE_BASE}.spec.js" ]]; then
-        TEST_FOUND=true
+    # Pattern 2: __tests__ subdirectory
+    if [[ -d "${FILE_DIR}/__tests__" ]]; then
+        if [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.ts" ]] || \
+           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.js" ]] || \
+           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.ts" ]] || \
+           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.js" ]]; then
+            TEST_FOUND=true
+        fi
+    fi
+
+    # Pattern 3: tests directory at project root
+    if [[ -d "tests" ]]; then
+        # Find any test file containing the base name
+        if find tests -name "*${FILE_BASE}*test*" -o -name "*${FILE_BASE}*spec*" 2>/dev/null | grep -q .; then
+            TEST_FOUND=true
+        fi
+    fi
+
+    # Pattern 4: Check for test directory parallel to source
+    if [[ "$FILE_DIR" =~ ^(src|lib)/ ]]; then
+        TEST_DIR=$(echo "$FILE_DIR" | sed 's/^src/tests/' | sed 's/^lib/tests/')
+        if [[ -f "${TEST_DIR}/${FILE_BASE}.test.ts" ]] || \
+           [[ -f "${TEST_DIR}/${FILE_BASE}.test.js" ]] || \
+           [[ -f "${TEST_DIR}/${FILE_BASE}.spec.ts" ]] || \
+           [[ -f "${TEST_DIR}/${FILE_BASE}.spec.js" ]]; then
+            TEST_FOUND=true
+        fi
     fi
 fi
 
