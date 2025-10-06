@@ -24,43 +24,56 @@ When user provides a request, you automatically execute this workflow combining 
 
 **Check:** If `.claude/memory/.preflight-done` exists, skip this step entirely.
 
-**If not exists, conduct interactive configuration using sequential questioning loop:**
+**If not exists, YOU MUST ASK THE USER INTERACTIVELY:**
 
-**Sequential questioning loop (interactive):**
+🚨 **CRITICAL**: You CANNOT fabricate user responses. A PreToolUse hook validates the conversation transcript and will BLOCK preflight.sh if user messages don't exist. You MUST get actual user input.
 
-- Present EXACTLY ONE question at a time.
-- After the user answers, validate the answer and record it in working memory.
-- Move to the next question.
-- Stop when all questions answered.
+**MANDATORY INTERACTIVE QUESTIONING:**
 
-**Question 1:**
-"📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research."
+**1. ASK Question 1 (output to user):**
+```
+📊 Enable deterministic logging? This captures all hook decisions and memory operations to `.claude/memory/logs/current/*.jsonl` for debugging and research.
 
 | Option | Description |
 |--------|-------------|
 | y | Enable logging |
 | n | Disable logging |
 
-After user answers, record answer in working memory as `LOGGING_ANSWER`.
+Your answer (y/n):
+```
 
-**Question 2:**
-"🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps."
+**2. WAIT for user to respond** (their next message)
+
+**3. READ their answer** and save as `LOGGING_ANSWER`
+
+**4. ASK Question 2 (output to user):**
+```
+🌐 Enable browser testing with Chrome DevTools? This validates CSS loading, user interactions, and DOM changes in a real browser (~30-60s per UI task). Best for web apps.
 
 | Option | Description |
 |--------|-------------|
 | y | Enable browser testing |
 | n | Disable browser testing |
 
-After user answers, record answer in working memory as `BROWSER_ANSWER`.
+Your answer (y/n):
+```
 
-**After both questions answered:**
+**5. WAIT for user to respond** (their next message)
 
-Execute preflight script with collected answers (MUST include userConfirmed:true):
+**6. READ their answer** and save as `BROWSER_ANSWER`
+
+**7. ONLY AFTER BOTH USER RESPONSES, execute preflight:**
 ```bash
 ./.claude/memory/lib/preflight.sh '{"logging":"LOGGING_ANSWER","browserTesting":"BROWSER_ANSWER","prdPath":"","userConfirmed":true}'
 ```
 
-Read JSON output and confirm:
+The preflight-confirmation hook will:
+- Read the conversation transcript
+- Verify user messages exist after questions
+- Verify answers match command arguments
+- DENY if fabricated, ALLOW if legitimate
+
+**8. Read JSON output and confirm:**
 ```
 ✅ Configuration saved
 - Logging: [enabled/disabled]
