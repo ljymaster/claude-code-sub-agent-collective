@@ -67,6 +67,15 @@ TEST_FOUND=false
 TASK_INDEX="$MEMORY_DIR/task-index.json"
 
 if [[ -f "$TASK_INDEX" ]]; then
+    # Check if epic is complete (all tasks done)
+    EPIC_STATUS=$(jq -r '.tasks[] | select(.type=="epic") | .status' "$TASK_INDEX" 2>/dev/null | head -1)
+    if [[ "$EPIC_STATUS" == "done" ]]; then
+        # Epic complete - allow all writes (integration phase)
+        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Epic complete - integration phase allowed" "{\"file\":\"$FILE_PATH\",\"epicStatus\":\"done\"}"
+        echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Epic complete - integration phase allowed"}}'
+        exit 0
+    fi
+
     # Find task that has this file as a deliverable
     CURRENT_TASK=$(jq -r --arg file "$FILE_PATH" '.tasks[] | select(.deliverables[]? == $file) | .id' "$TASK_INDEX" 2>/dev/null | head -1)
 
