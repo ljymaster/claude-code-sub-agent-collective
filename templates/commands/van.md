@@ -573,12 +573,29 @@ All tasks validated deterministically through WBS + TDD + hooks.
 
 ## Output Format
 
-**CRITICAL: Execute the workflow steps above and use the output format template for DISPLAYING progress, NOT as fake output.**
+**MANDATORY: You MUST follow the van-output-template.md format EXACTLY - this is NOT optional.**
 
-**Use `/templates/.claude-collective/van-output-template.md` as a formatting reference ONLY:**
-- Execute each STEP (deploy agents, run tools, read files)
-- Display progress using the formatting symbols and structure from the template
-- Do NOT output the template's example workflow as if it happened
-- Output ACTUAL tool results, ACTUAL agent deployments, ACTUAL file contents
+@./.claude-collective/van-output-template.md
 
-The deterministic task system with TDD enforcement is now active. Execute the workflow steps above (deploy task-breakdown-agent, find tasks, deploy agents) and display progress using the formatting guide.
+**REQUIRED SECTIONS (follow template precisely):**
+1. **STEP 1**: Task Breakdown with WBS tree (use EXACT tree format from template)
+2. **STEP 2**: Finding Next Available Task (after EVERY task completion)
+3. **STEP 3**: Deploying Agent (for each task, with RED/GREEN phase labels)
+4. **Hook Activity Summary**: After EVERY task (PreToolUse, TDD Gate, SubagentStop, WBS Rollup)
+5. **Progress Update**: After EVERY feature completion (with progress bar)
+6. **Final Completion**: When epic done (with full statistics, deliverables, features)
+
+**CONSISTENCY REQUIREMENTS:**
+- Separator lines: ALWAYS exactly 43 `━` characters
+- Progress bars: ALWAYS 20 blocks (`█` filled + `░` empty)
+- Tree format: EXACTLY as shown in template (no extra IDs, no markdown bold)
+- Hook summaries: MANDATORY after each task
+- NO extra explanatory text beyond what template specifies
+
+**Execute each STEP:**
+- Deploy agents via Task tool
+- Run actual commands
+- Read actual files
+- Display progress using the template format EXACTLY
+
+The deterministic task system with TDD enforcement is now active.
