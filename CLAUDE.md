@@ -85,25 +85,40 @@ Build a simple login form with username and password fields
    - Deploys `@component-implementation-agent` for implementation task (e.g., 1.1.2)
    - TDD hooks enforce tests-first (blocks Write until tests exist)
 
-4. **When feature completes (all tasks done), hooks ENFORCE validation:**
-   - **SubagentStop hook** creates `.needs-validation-{FEATURE_ID}` marker
+4. **When feature completes (all tasks done), hooks ENFORCE 3-gate validation:**
+   - **SubagentStop hook** creates TWO markers:
+     - `.needs-validation-{FEATURE_ID}` → TDD validation required
+     - `.needs-deliverables-validation-{FEATURE_ID}` → File validation required
    - **PreToolUse hook** BLOCKS all task deployments until validation complete
-   - Hub MUST deploy `@tdd-validation-agent` (only way forward)
 
-5. **@tdd-validation-agent** executes:
+5. **Gate 1: TDD Validation** - `@tdd-validation-agent` (ENFORCED):
+   - **PreToolUse hook** BLOCKS all agents except tdd-validation-agent
+   - Hub MUST deploy `@tdd-validation-agent` (only way forward)
    - Runs tests to verify they pass
-   - **SCANS IMPLEMENTATION CODE** for browser functionality:
+   - Removes validation marker when complete
+
+6. **Gate 2: Deliverables Validation** - `@deliverables-validation-agent` (ENFORCED):
+   - **PreToolUse hook** BLOCKS all agents except deliverables-validation-agent
+   - Hub MUST deploy `@deliverables-validation-agent` (only way forward)
+   - **INTELLIGENTLY analyzes files created during feature:**
+     - Scans filesystem for files not in deliverables
+     - CSS for HTML/JSX/TSX? → Adds to deliverables ✅
+     - Assets in same directory? → Adds to deliverables ✅
+     - Unrelated files? → Reports error ❌
+   - Updates `task-index.json` deliverables array
+   - Removes deliverables marker when complete
+
+7. **Gate 3: Browser Testing** - `@chrome-devtools-testing-agent` (CONDITIONAL):
+   - **tdd-validation-agent scans code** for UI elements:
      - Detects `<form>`, `<input>`, `<button>` elements
      - Detects `addEventListener`, `onclick` handlers
      - Detects DOM manipulation (`document.querySelector`, etc.)
-   - **IF UI/DOM detected**: Creates `.needs-browser-testing-{FEATURE_ID}` marker
-   - **IF no UI/DOM**: Workflow continues to next feature
+   - **IF UI detected**: Creates `.needs-browser-testing-{FEATURE_ID}` marker
+   - **IF no UI**: Skips browser testing, continues to next feature
+   - **PreToolUse hook** BLOCKS all agents except chrome-devtools-testing-agent
+   - Hub MUST deploy `@chrome-devtools-testing-agent` (if browserTesting=true)
 
-6. **If browser testing required, hooks ENFORCE deployment:**
-   - **PreToolUse hook** BLOCKS all task deployments until browser testing complete
-   - Hub MUST deploy `@chrome-devtools-testing-agent` (only way forward)
-
-7. **@chrome-devtools-testing-agent** executes:
+8. **@chrome-devtools-testing-agent** executes:
    - Opens browser to application URL
    - **CLICKS and INTERACTS** with actual UI (no console.log needed)
    - Fills username field using `mcp__chrome-devtools__fill`
@@ -162,14 +177,25 @@ Build a simple login form with username and password fields
 - Completes task → hook creates validation marker → workflow blocked
 
 **tdd-validation-agent:**
-- DEPLOYED AUTOMATICALLY when feature completes (hook enforced)
+- DEPLOYED AUTOMATICALLY when feature completes (hook enforced - Gate 1)
 - Validates TDD methodology (tests pass, build succeeds)
 - **Scans code for**: `<form>`, `<input>`, event handlers, DOM APIs
 - **IF UI detected**: Creates browser testing marker → workflow blocked again
-- **IF no UI**: Marker removed, workflow continues
+- **IF no UI**: Workflow continues
+
+**deliverables-validation-agent:**
+- DEPLOYED AUTOMATICALLY after TDD validation (hook enforced - Gate 2)
+- Scans filesystem for files created during feature
+- **INTELLIGENTLY categorizes files**:
+  - CSS/SCSS/SASS for HTML/JSX/TSX → Adds to deliverables ✅
+  - Assets in same directory → Adds to deliverables ✅
+  - Test/config files → Skips (infrastructure)
+  - Unrelated files → Reports error ❌
+- Updates `task-index.json` deliverables array
+- Validation happens at feature completion (full context available)
 
 **chrome-devtools-testing-agent:**
-- DEPLOYED AUTOMATICALLY when UI detected + browserTesting=true (hook enforced)
+- DEPLOYED AUTOMATICALLY when UI detected + browserTesting=true (hook enforced - Gate 3)
 - Tests browser functionality via actual interactions
 - Primary method: Click, fill, verify DOM changes
 - Secondary: Network requests, console errors
