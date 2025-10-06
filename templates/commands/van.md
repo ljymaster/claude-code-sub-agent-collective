@@ -191,11 +191,58 @@ A leaf task has no children. Dependencies are satisfied when all dependency task
 
 ### STEP 3: Deploy Agent for Task
 
-**ACTION:** Use the Task tool to deploy the agent specified in that task's "agent" field.
+**ACTION:** Read task details from task-index.json and deploy agent with complete task context.
 
-**For reference only, here is an example (deploy the ACTUAL agent from the ACTUAL task you found, not this example):**
+**MANDATORY STEPS:**
+
+1. **Read the task details** from task-index.json:
+   ```bash
+   jq '.tasks[] | select(.id=="TASK_ID")' .claude/memory/task-index.json
+   ```
+
+2. **Extract key information**:
+   - Task ID (e.g., "1.1.1")
+   - Title (e.g., "Write HTML structure tests")
+   - Agent (e.g., "test-first-agent")
+   - Deliverables array (e.g., ["tests/index.test.html"])
+   - Dependencies array (if any)
+   - Parent feature ID (e.g., "1.1")
+
+3. **Deploy agent via Task tool** with complete context in prompt:
+
+**CRITICAL FORMAT - Agents depend on this information:**
 ```
-Example: Deploy @test-first-agent via Task tool for task 1.1.1
+Task ID: [TASK_ID]
+Title: [TASK_TITLE]
+Parent Feature: [PARENT_ID]
+Deliverables Expected: [LIST_OF_FILES]
+Dependencies Completed: [LIST_OF_DEPENDENCY_IDS or "none"]
+
+[USER_REQUEST_CONTEXT if first task, otherwise brief feature description]
+```
+
+**Example for task 1.1.1:**
+```
+Task ID: 1.1.1
+Title: Write HTML structure tests
+Parent Feature: 1.1
+Deliverables Expected: tests/index.test.html
+Dependencies Completed: none
+
+User requested: "Build a simple HTML todo app"
+Create tests for the HTML structure component.
+```
+
+**Example for task 1.1.2 (with dependency):**
+```
+Task ID: 1.1.2
+Title: Implement HTML structure
+Parent Feature: 1.1
+Deliverables Expected: index.html
+Dependencies Completed: 1.1.1
+
+Implement the HTML structure to make tests pass.
+Tests are at: tests/index.test.html
 ```
 
 The PreToolUse hook will automatically validate and ALLOW or DENY deployment.

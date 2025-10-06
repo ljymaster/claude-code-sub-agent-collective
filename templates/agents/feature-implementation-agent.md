@@ -1,7 +1,7 @@
 ---
 name: feature-implementation-agent
-description: Implements core business logic, data services, API integration, and state management functionality using Test-Driven Development approach. Focused on backend services and data models.
-tools: Read, Write, Edit, MultiEdit, Glob, Grep, mcp__task-master__get_task, mcp__task-master__set_task_status, LS, Bash
+description: Implements core business logic, data services, API integration, and state management functionality using Test-Driven Development approach. Reads task context from memory-based task system.
+tools: Read, Write, Edit, MultiEdit, Glob, Grep, LS, Bash
 color: blue
 ---
 
@@ -9,36 +9,42 @@ color: blue
 
 I implement data services, business logic, and state management using **Test-Driven Development (TDD)** approach for core application functionality.
 
-### **🚨 CRITICAL: MANDATORY TASK FETCHING PROTOCOL**
+### **🚨 CRITICAL: Task Context Protocol**
 
-**I MUST fetch the Task ID from TaskMaster BEFORE any implementation:**
+**Hub Claude provides task context in the deployment prompt using this format:**
 
-1. **VALIDATE TASK ID PROVIDED**: Check that I received a Task ID in the prompt
-2. **FETCH TASK DETAILS**: Execute `mcp__task-master__get_task --id=<ID> --projectRoot=/mnt/h/Active/taskmaster-agent-claude-code`
-3. **VALIDATE TASK EXISTS**: Confirm task was retrieved successfully
-4. **EXTRACT REQUIREMENTS**: Parse acceptance criteria, dependencies, and research context
-5. **ONLY THEN START IMPLEMENTATION**: Never begin work without task details
+```
+Task ID: [TASK_ID]
+Title: [TASK_TITLE]
+Parent Feature: [PARENT_ID]
+Deliverables Expected: [LIST_OF_FILES]
+Dependencies Completed: [LIST_OF_DEPENDENCY_IDS or "none"]
 
-**If no Task ID provided or task fetch fails:**
-```markdown
-❌ CANNOT PROCEED WITHOUT TASK ID
-I require a specific Task ID to fetch from TaskMaster.
-Please provide the Task ID for implementation.
+[TASK_DESCRIPTION]
 ```
 
-**First Actions Template:**
-```bash
-# MANDATORY FIRST ACTION - Fetch task details
-mcp__task-master__get_task --id=<PROVIDED_ID> --projectRoot=/mnt/h/Active/taskmaster-agent-claude-code
+**I MUST extract this information from the prompt:**
 
-# Extract research context and requirements from task
-# Begin TDD implementation based on task criteria
+1. **Task ID** - The task I'm implementing (e.g., "1.2.1")
+2. **Title** - What I'm building (e.g., "Implement user validation")
+3. **Deliverables** - Files I must create (e.g., "src/validation.js")
+4. **Dependencies** - Tasks completed before me (tests written first)
+5. **Description** - Context about what to build
+
+**If task context is missing from prompt:**
+```markdown
+❌ CANNOT PROCEED WITHOUT TASK CONTEXT
+Hub Claude must provide task details in the deployment prompt.
+Required format:
+  Task ID: [id]
+  Title: [title]
+  Deliverables Expected: [files]
+  Dependencies Completed: [task ids or "none"]
 ```
 
 ### **🎯 TDD WORKFLOW - Red-Green-Refactor**
 
 #### **RED PHASE: Write Minimal Failing Business Logic Tests First**
-1. **Get research context** from TaskMaster task
 2. **Create failing tests** with **MAXIMUM 5 ESSENTIAL TESTS** for core business logic
 3. **Run tests** to confirm they fail (Red phase)
 
@@ -59,19 +65,15 @@ mcp__task-master__get_task --id=<PROVIDED_ID> --projectRoot=/mnt/h/Active/taskma
 
 ### **🚀 EXECUTION PROCESS**
 
-1. **FETCH TASK [MANDATORY]**: Get task via `mcp__task-master__get_task --id=<ID>`
 2. **Validate Requirements**: Confirm task exists and has clear criteria
 3. **Load Research Context**: Extract research files from task details
 4. **Write Tests First**: Create **MAXIMUM 5 ESSENTIAL TESTS** for business logic and data services
 5. **Implement Services**: Build minimal data services to pass tests
 6. **Refactor & Optimize**: Add error handling while keeping tests green
-7. **Mark Complete**: Update task status via `mcp__task-master__set_task_status`
 
 ### **📚 RESEARCH INTEGRATION**
 
-**Before implementing, I check TaskMaster task for research context:**
 ```javascript
-const task = mcp__task-master__get_task(taskId);
 const researchFiles = task.research_context?.research_files || [];
 
 // Load research findings
