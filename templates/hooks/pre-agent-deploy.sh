@@ -49,14 +49,7 @@ mkdir -p "$MARKERS_DIR"
 
 # Extract prompt and agent name for marker checks
 PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
-
-# Extract agent from subagent_type field (primary) or description field (fallback)
-REQUESTED_AGENT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.subagent_type // .tool_input.description // empty' 2>/dev/null | { grep -oP '[a-z-]+-agent' || true; } | head -n1 || echo "")
-
-# Fallback: try to extract from prompt with @ symbol
-if [[ -z "$REQUESTED_AGENT" ]]; then
-  REQUESTED_AGENT=$(echo "$PROMPT" | { grep -oP '@\K[a-z-]+-agent' || true; } | head -n1 || echo "")
-fi
+REQUESTED_AGENT=$(echo "$PROMPT" | { grep -oP '@\K[a-z-]+-agent' || true; } | head -n1 || echo "")
 
 # Check for validation markers (Feature validation required)
 if ls "$MARKERS_DIR"/.needs-validation-* 1>/dev/null 2>&1; then
