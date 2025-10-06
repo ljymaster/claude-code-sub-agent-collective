@@ -89,3 +89,44 @@ propagate_status_up() {
   done
 }
 
+find_next_available_task() {
+  _require_index || return 1
+
+  # Find all pending leaf tasks
+  local pending_tasks
+  pending_tasks=$(jq -r '.tasks[] | select(.type=="task" and .status=="pending" and (.children | length) == 0) | .id' "$TASKS_INDEX")
+
+  # Check each task to see if dependencies are satisfied
+  for task_id in $pending_tasks; do
+    # Get dependencies for this task
+    local deps
+    deps=$(jq -r --arg tid "$task_id" '.tasks[] | select(.id == $tid) | .dependencies[]? // empty' "$TASKS_INDEX")
+
+    # If no dependencies, this task is available
+    if [[ -z "$deps" ]]; then
+      echo "$task_id"
+      return 0
+    fi
+
+    # Check if all dependencies are done
+    local all_done=true
+    for dep_id in $deps; do
+      local dep_status
+      dep_status=$(jq -r --arg did "$dep_id" '.tasks[] | select(.id == $did) | .status' "$TASKS_INDEX")
+      if [[ "$dep_status" != "done" ]]; then
+        all_done=false
+        break
+      fi
+    done
+
+    # If all dependencies done, this task is available
+    if [[ "$all_done" = true ]]; then
+      echo "$task_id"
+      return 0
+    fi
+  done
+
+  # No available tasks
+  return 1
+}
+
