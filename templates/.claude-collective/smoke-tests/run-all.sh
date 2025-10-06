@@ -41,13 +41,13 @@ for test_script in "${SMOKE_TESTS[@]}"; do
 
         if "$test_script"; then
             echo -e "${GREEN}✅ $test_name PASSED${NC}"
-            ((TOTAL_PASSED++))
+            TOTAL_PASSED=$((TOTAL_PASSED+1))
         else
             echo -e "${RED}❌ $test_name FAILED${NC}"
-            ((TOTAL_FAILED++))
+            TOTAL_FAILED=$((TOTAL_FAILED+1))
         fi
 
-        ((TOTAL_TESTS++))
+        TOTAL_TESTS=$((TOTAL_TESTS+1))
         echo ""
     fi
 done

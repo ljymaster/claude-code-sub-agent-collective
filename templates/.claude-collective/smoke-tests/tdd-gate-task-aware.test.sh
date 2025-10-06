@@ -1,6 +1,6 @@
 #!/bin/bash
 # Smoke test: TDD-gate hook task-aware logic
-# Validates hook reads task-index.json to find dependency test files
+# Validates hook checks dependency task status instead of filesystem
 
 set -euo pipefail
 
@@ -33,11 +33,11 @@ test_hook() {
 
     if [[ "$decision" == "$expected_decision" ]]; then
         echo -e "${GREEN}✅ PASS${NC}"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED+1))
         return 0
     else
         echo -e "${RED}❌ FAIL (expected: $expected_decision, got: $decision)${NC}"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED+1))
         return 1
     fi
 }
@@ -56,8 +56,7 @@ cleanup() {
     if [[ -f .claude/memory/task-index.json.backup ]]; then
         mv .claude/memory/task-index.json.backup .claude/memory/task-index.json
     fi
-    # Remove test files
-    rm -f smoke-test-impl.html smoke-test-impl.test.html tests/smoke-test.test.html
+    # No filesystem test files to clean up (status-based validation)
 }
 
 trap cleanup EXIT
@@ -70,19 +69,21 @@ test_hook "Test file in tests/" "Write" "tests/smoke-test.test.html" "allow"
 test_hook "Test file with .test." "Write" "smoke-test-impl.test.html" "allow"
 
 echo ""
-echo "TEST 2: Task-aware with dependency test exists"
+echo "TEST 2: Task-aware with dependency task DONE"
 
-# Create task structure
+# Create task structure with dependency task marked as done
 cat > .claude/memory/task-index.json << 'EOF'
 {
   "tasks": [
     {
       "id": "smoke-test-1",
+      "status": "done",
       "dependencies": [],
       "deliverables": ["tests/smoke-test.test.html"]
     },
     {
       "id": "smoke-test-2",
+      "status": "pending",
       "dependencies": ["smoke-test-1"],
       "deliverables": ["smoke-test-impl.html"]
     }
@@ -90,21 +91,32 @@ cat > .claude/memory/task-index.json << 'EOF'
 }
 EOF
 
-# Create dependency test file
-mkdir -p tests
-echo "<!-- Test -->" > tests/smoke-test.test.html
-
-test_hook "Implementation with existing dependency test" "Write" "smoke-test-impl.html" "allow"
-
-# Cleanup test file
-rm -f tests/smoke-test.test.html
-rmdir tests 2>/dev/null || true
+test_hook "Implementation with dependency task done" "Write" "smoke-test-impl.html" "allow"
 
 echo ""
-echo "TEST 3: Task-aware with MISSING dependency test"
+echo "TEST 3: Task-aware with dependency task NOT done"
 
-# Same task structure, but test file doesn't exist
-test_hook "Implementation with MISSING dependency test" "Write" "smoke-test-impl.html" "deny"
+# Same task structure, but dependency task is pending (not done)
+cat > .claude/memory/task-index.json << 'EOF'
+{
+  "tasks": [
+    {
+      "id": "smoke-test-1",
+      "status": "pending",
+      "dependencies": [],
+      "deliverables": ["tests/smoke-test.test.html"]
+    },
+    {
+      "id": "smoke-test-2",
+      "status": "pending",
+      "dependencies": ["smoke-test-1"],
+      "deliverables": ["smoke-test-impl.html"]
+    }
+  ]
+}
+EOF
+
+test_hook "Implementation with dependency task not done" "Write" "smoke-test-impl.html" "deny"
 
 echo ""
 echo "════════════════════════════════"

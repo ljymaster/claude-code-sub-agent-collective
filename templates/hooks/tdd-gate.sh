@@ -75,27 +75,32 @@ if [[ -f "$TASK_INDEX" ]]; then
         DEPENDENCIES=$(jq -r --arg taskid "$CURRENT_TASK" '.tasks[] | select(.id == $taskid) | .dependencies[]? // empty' "$TASK_INDEX" 2>/dev/null)
 
         if [[ -n "$DEPENDENCIES" ]]; then
-            # Check if any dependency task deliverables exist (those are the tests)
-            for dep_id in $DEPENDENCIES; do
-                TEST_DELIVERABLES=$(jq -r --arg depid "$dep_id" '.tasks[] | select(.id == $depid) | .deliverables[]?' "$TASK_INDEX" 2>/dev/null)
+            # Check if all dependency tasks are complete (status="done")
+            # Trust SubagentStop hook to have validated deliverables exist
+            ALL_DEPS_DONE=true
+            INCOMPLETE_DEPS=""
 
-                for test_file in $TEST_DELIVERABLES; do
-                    if [[ -f "$test_file" ]]; then
-                        TEST_FOUND=true
-                        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Tests exist from dependency task $dep_id" "{\"file\":\"$FILE_PATH\",\"testFile\":\"$test_file\",\"dependencyTask\":\"$dep_id\"}"
-                        break 2
-                    fi
-                done
+            for dep_id in $DEPENDENCIES; do
+                DEP_STATUS=$(jq -r --arg depid "$dep_id" '.tasks[] | select(.id == $depid) | .status' "$TASK_INDEX" 2>/dev/null)
+
+                if [[ "$DEP_STATUS" != "done" ]]; then
+                    ALL_DEPS_DONE=false
+                    INCOMPLETE_DEPS="$INCOMPLETE_DEPS $dep_id"
+                fi
             done
 
-            # If dependencies exist but no test files found, this is a task structure problem
-            if [[ "$TEST_FOUND" = false ]]; then
-                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task structure error: Dependency task deliverables don't exist" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+            if [[ "$ALL_DEPS_DONE" = true ]]; then
+                # All dependencies complete - allow implementation
+                TEST_FOUND=true
+                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: All dependency tasks complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+            else
+                # Dependencies not complete - deny
+                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task dependencies not complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"incompleteDeps\":\"$INCOMPLETE_DEPS\"}"
                 echo "{
                     \"hookSpecificOutput\": {
                         \"hookEventName\": \"PreToolUse\",
                         \"permissionDecision\": \"deny\",
-                        \"permissionDecisionReason\": \"🚨 TASK STRUCTURE ERROR\\n\\nTask ${CURRENT_TASK} has dependencies but test files don't exist.\\n\\nThis indicates a problem with task breakdown, not TDD compliance.\\n\\n❌ Cannot proceed - dependency task deliverables missing\\n\\n💡 Solution: Hub Claude should redeploy task-breakdown-agent to fix task structure\"
+                        \"permissionDecisionReason\": \"🚨 TDD VIOLATION\\n\\nTask ${CURRENT_TASK} has incomplete dependencies:${INCOMPLETE_DEPS}\\n\\nThese dependency tasks must complete before implementation can proceed.\\n\\n❌ Cannot proceed - dependency tasks not done\\n\\n💡 Solution: Complete dependency tasks first (tests must be written before implementation)\"
                     }
                 }"
                 exit 0
@@ -108,63 +113,20 @@ if [[ -f "$TASK_INDEX" ]]; then
     fi
 fi
 
-# FALLBACK: Pattern-based matching (for non-task workflows)
-if [[ "$TEST_FOUND" = false ]]; then
-    # Pattern 1: Same directory with .test or .spec extension
-    if [[ -f "${FILE_DIR}/${FILE_BASE}.test.ts" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.test.js" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.test.tsx" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.test.jsx" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.ts" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.js" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.tsx" ]] || \
-       [[ -f "${FILE_DIR}/${FILE_BASE}.spec.jsx" ]]; then
-        TEST_FOUND=true
-    fi
-
-    # Pattern 2: __tests__ subdirectory
-    if [[ -d "${FILE_DIR}/__tests__" ]]; then
-        if [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.ts" ]] || \
-           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.test.js" ]] || \
-           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.ts" ]] || \
-           [[ -f "${FILE_DIR}/__tests__/${FILE_BASE}.js" ]]; then
-            TEST_FOUND=true
-        fi
-    fi
-
-    # Pattern 3: tests directory at project root
-    if [[ -d "tests" ]]; then
-        # Find any test file containing the base name
-        if find tests -name "*${FILE_BASE}*test*" -o -name "*${FILE_BASE}*spec*" 2>/dev/null | grep -q .; then
-            TEST_FOUND=true
-        fi
-    fi
-
-    # Pattern 4: Check for test directory parallel to source
-    if [[ "$FILE_DIR" =~ ^(src|lib)/ ]]; then
-        TEST_DIR=$(echo "$FILE_DIR" | sed 's/^src/tests/' | sed 's/^lib/tests/')
-        if [[ -f "${TEST_DIR}/${FILE_BASE}.test.ts" ]] || \
-           [[ -f "${TEST_DIR}/${FILE_BASE}.test.js" ]] || \
-           [[ -f "${TEST_DIR}/${FILE_BASE}.spec.ts" ]] || \
-           [[ -f "${TEST_DIR}/${FILE_BASE}.spec.js" ]]; then
-            TEST_FOUND=true
-        fi
-    fi
-fi
-
-# Decision: Allow or block
+# Decision: Task-aware workflow required
 if [ "$TEST_FOUND" = true ]; then
-    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Tests exist for this file" "{\"file\":\"$FILE_PATH\",\"testsFound\":true}"
-    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Tests exist for this file"}}'
+    # Task dependencies validated - allow
+    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Dependencies validated" "{\"file\":\"$FILE_PATH\",\"taskWorkflow\":true}"
+    echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "Task dependencies validated"}}'
     exit 0
 else
-    # Block with helpful message (LOG this TDD violation)
-    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "TDD violation: No tests found for $FILE_NAME" "{\"file\":\"$FILE_PATH\",\"testsFound\":false,\"fileBase\":\"$FILE_BASE\"}"
+    # Not in task workflow OR file not part of task structure
+    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "TDD violation: Must use task-based workflow" "{\"file\":\"$FILE_PATH\",\"taskWorkflow\":false,\"taskIndexExists\":$(test -f \"$TASK_INDEX\" && echo true || echo false)}"
     echo "{
         \"hookSpecificOutput\": {
             \"hookEventName\": \"PreToolUse\",
             \"permissionDecision\": \"deny\",
-            \"permissionDecisionReason\": \"🧪 TDD VIOLATION: No tests found for ${FILE_NAME}\\n\\nWrite tests first (RED phase):\\n\\nExpected test locations:\\n  • ${FILE_DIR}/${FILE_BASE}.test.{ts,js,tsx,jsx}\\n  • ${FILE_DIR}/__tests__/${FILE_BASE}.test.{ts,js}\\n  • tests/**/${FILE_BASE}.{test,spec}.{ts,js}\\n\\nTDD Workflow:\\n  1. RED: Write failing test\\n  2. GREEN: Write minimal code to pass\\n  3. REFACTOR: Clean up implementation\\n\\n💡 Tip: Use /output-style tdd-mode for strict TDD guidance\"
+            \"permissionDecisionReason\": \"🚨 TDD VIOLATION: Task-based workflow required\\n\\nFile: ${FILE_NAME}\\n\\nThis implementation file is not part of the current task structure.\\n\\nAll implementation must be part of a task-based workflow with proper dependencies.\\n\\n❌ Cannot proceed\\n\\n💡 Solution: Use /van command to create task-based workflow with proper test dependencies\"
         }
     }"
     exit 0

@@ -55,9 +55,9 @@ After user answers, record answer in working memory as `BROWSER_ANSWER`.
 
 **After both questions answered:**
 
-Execute preflight script with collected answers:
+Execute preflight script with collected answers (MUST include userConfirmed:true):
 ```bash
-./.claude/memory/lib/preflight.sh '{"logging":"LOGGING_ANSWER","browserTesting":"BROWSER_ANSWER","prdPath":""}'
+./.claude/memory/lib/preflight.sh '{"logging":"LOGGING_ANSWER","browserTesting":"BROWSER_ANSWER","prdPath":"","userConfirmed":true}'
 ```
 
 Read JSON output and confirm:

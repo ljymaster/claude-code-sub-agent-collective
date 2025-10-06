@@ -4,14 +4,23 @@ set -euo pipefail
 # Preflight configuration script for /van command
 # Follows spec-kit pattern: Script handles imperative logic, command stays declarative
 #
-# Usage: preflight.sh '{"logging":"y","browserTesting":"y","prdPath":"path/to/prd.txt"}'
+# Usage: preflight.sh '{"logging":"y","browserTesting":"y","prdPath":"path/to/prd.txt","userConfirmed":true}'
 # Returns: JSON status object
+#
+# CRITICAL: userConfirmed must be true to prevent bypassing user questions
 
 RESPONSES="${1:-}"
 
 # Validate input
 if [[ -z "$RESPONSES" ]]; then
   echo '{"error": "No responses provided", "status": "failed"}' >&2
+  exit 1
+fi
+
+# Validate user was actually asked questions
+USER_CONFIRMED=$(echo "$RESPONSES" | jq -r '.userConfirmed // false')
+if [[ "$USER_CONFIRMED" != "true" ]]; then
+  echo '{"error": "User must confirm preflight questions. Set userConfirmed:true only after asking user.", "status": "failed"}' >&2
   exit 1
 fi
 
