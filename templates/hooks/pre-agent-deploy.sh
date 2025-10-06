@@ -49,7 +49,25 @@ mkdir -p "$MARKERS_DIR"
 
 # Extract prompt and agent name for marker checks
 PROMPT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.prompt // empty' 2>/dev/null || echo "")
-REQUESTED_AGENT=$(echo "$PROMPT" | { grep -oP '@\K[a-z-]+-agent' || true; } | head -n1 || echo "")
+
+# Try extracting agent name from multiple sources
+# 1. subagent_type field (primary - most reliable)
+REQUESTED_AGENT=$(echo "$TOOL_INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null || echo "")
+
+# 2. If empty, try description field (format: "agent-name(description)" or just "agent-name")
+if [[ -z "$REQUESTED_AGENT" || "$REQUESTED_AGENT" == "null" ]]; then
+  DESCRIPTION=$(echo "$TOOL_INPUT" | jq -r '.tool_input.description // empty' 2>/dev/null || echo "")
+  # Extract agent-name from "agent-name(description)" format
+  REQUESTED_AGENT=$(echo "$DESCRIPTION" | grep -oP '^[a-z-]+-agent(?=\(|$)' || echo "")
+fi
+
+# 3. Final fallback: @ symbol in prompt
+if [[ -z "$REQUESTED_AGENT" || "$REQUESTED_AGENT" == "null" ]]; then
+  REQUESTED_AGENT=$(echo "$PROMPT" | { grep -oP '@\K[a-z-]+-agent' || true; } | head -n1 || echo "")
+fi
+
+# Log extraction for debugging
+log_hook_event "PreToolUse" "Task" "" "info" "Agent extraction: '$REQUESTED_AGENT'" "{\"extracted\":\"$REQUESTED_AGENT\"}" 2>/dev/null || true
 
 # Check for validation markers (Feature validation required)
 if ls "$MARKERS_DIR"/.needs-validation-* 1>/dev/null 2>&1; then
