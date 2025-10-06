@@ -71,18 +71,18 @@ while IFS= read -r line; do
 
   # Capture user's answer to logging question
   if [[ "$TYPE" == "user" ]] && [[ "$WAITING_FOR_LOGGING_ANSWER" == true ]]; then
-    # Extract y/n from user message
-    if echo "$CONTENT" | grep -qiE '^\s*[yn]\s*$'; then
-      USER_ANSWERED_LOGGING=$(echo "$CONTENT" | grep -oiE '[yn]' | tr '[:upper:]' '[:lower:]')
+    # Extract y/n from user message (lenient - just check if y or n appears)
+    if echo "$CONTENT" | grep -qiE '[yn]'; then
+      USER_ANSWERED_LOGGING=$(echo "$CONTENT" | grep -oiE '[yn]' | head -1 | tr '[:upper:]' '[:lower:]')
       WAITING_FOR_LOGGING_ANSWER=false
     fi
   fi
 
   # Capture user's answer to browser testing question
   if [[ "$TYPE" == "user" ]] && [[ "$WAITING_FOR_BROWSER_ANSWER" == true ]]; then
-    # Extract y/n from user message
-    if echo "$CONTENT" | grep -qiE '^\s*[yn]\s*$'; then
-      USER_ANSWERED_BROWSER=$(echo "$CONTENT" | grep -oiE '[yn]' | tr '[:upper:]' '[:lower:]')
+    # Extract y/n from user message (lenient - just check if y or n appears)
+    if echo "$CONTENT" | grep -qiE '[yn]'; then
+      USER_ANSWERED_BROWSER=$(echo "$CONTENT" | grep -oiE '[yn]' | head -1 | tr '[:upper:]' '[:lower:]')
       WAITING_FOR_BROWSER_ANSWER=false
     fi
   fi
