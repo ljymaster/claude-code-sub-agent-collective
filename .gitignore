@@ -100,6 +100,11 @@ claude-code-collective/.claude-collective/metrics/snapshots/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
 .claude-collective/metrics/
 settings.local.json
+
+# Local Claude Code development environment (NOT distributed to users)
+# Ignore .claude/ at root AND any test artifacts in templates/scripts/
+/.claude/
+templates/scripts/.claude/
