@@ -63,7 +63,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: subagent_type extraction allows tdd-validation-agent ... "
@@ -95,7 +95,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Wrong agent blocked by validation marker ... "
@@ -123,7 +123,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Description field extraction works ... "
@@ -152,7 +152,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: @ symbol extraction works ... "
@@ -183,7 +183,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: Deliverables validation agent allowed ... "
@@ -212,7 +212,7 @@ TOOL_INPUT=$(cat <<'JSON'
 JSON
 )
 
-RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1 | tail -1)  # Get last line (JSON output)
+RESULT=$(echo "$TOOL_INPUT" | "$HOOK" 2>&1)  # Capture all output
 DECISION=$(echo "$RESULT" | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null || echo "")
 
 echo -n "  Testing: No agent extraction allows operation ... "
