@@ -45,6 +45,14 @@ calculate_rollup() {
   local parent_id="$1"
   _require_index || return 1
 
+  # Validate parent task exists
+  local parent_exists
+  parent_exists=$(jq --arg pid "$parent_id" '[.tasks[] | select(.id==$pid)] | length' "$TASKS_INDEX")
+  if [[ "$parent_exists" -eq 0 ]]; then
+    echo "ERROR: Parent task $parent_id does not exist in task hierarchy" >&2
+    return 1
+  fi
+
   local summary
   summary=$(jq --arg pid "$parent_id" '
     . as $root | (
