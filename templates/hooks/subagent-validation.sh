@@ -49,6 +49,20 @@ if [[ -z "$TASK_ID" ]]; then
   TASK_ID=$(jq -r '.tasks[] | select(.status=="in-progress" and (.children == [] or .children == null)) | .id' "$TASKS_INDEX" | head -n1)
 fi
 
+# Fallback: read from .current-task marker
+if [[ -z "$TASK_ID" && -f "$MEMORY_DIR/markers/.current-task" ]]; then
+  TASK_ID=$(cat "$MEMORY_DIR/markers/.current-task" 2>/dev/null || echo "")
+fi
+
+# Validate task ID exists in hierarchy
+if [[ -n "$TASK_ID" && "$TASK_ID" != "null" ]]; then
+  TASK_EXISTS=$(jq --arg tid "$TASK_ID" '[.tasks[] | select(.id == $tid)] | length' "$TASKS_INDEX" 2>/dev/null || echo "0")
+  if [[ "$TASK_EXISTS" -eq 0 ]]; then
+    echo "ERROR: Task ID $TASK_ID not found in task hierarchy" >&2
+    TASK_ID=""  # Clear invalid task ID
+  fi
+fi
+
 if [[ -z "${TASK_ID:-}" || "$TASK_ID" == "null" ]]; then
   # No task ID - check if this is chrome-devtools-testing-agent (freeform deployment)
   AGENT_NAME=""

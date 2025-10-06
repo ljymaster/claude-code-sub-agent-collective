@@ -218,7 +218,13 @@ Starting execution...
    - Dependencies array (if any)
    - Parent feature ID (e.g., "1.1")
 
-3. **Deploy agent via Task tool** with complete context in prompt:
+3. **Write .current-task marker** before deployment:
+   ```bash
+   mkdir -p .claude/memory/markers && echo "TASK_ID" > .claude/memory/markers/.current-task
+   ```
+   This ensures SubagentStop hook can reliably extract task ID.
+
+4. **Deploy agent via Task tool** with complete context in prompt:
 
 **CRITICAL FORMAT - Agents depend on this information:**
 ```
