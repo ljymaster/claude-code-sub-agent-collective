@@ -61,7 +61,17 @@ WAITING_FOR_BROWSER_ANSWER=false
 
 while IFS= read -r line; do
   TYPE=$(echo "$line" | jq -r '.type // empty' 2>/dev/null || echo "")
-  CONTENT=$(echo "$line" | jq -r '.content // empty' 2>/dev/null || echo "")
+
+  # Extract content based on message type
+  # User messages: .message.content (string)
+  # Assistant messages: .message.content[].text (array of objects)
+  if [[ "$TYPE" == "user" ]]; then
+    CONTENT=$(echo "$line" | jq -r '.message.content // empty' 2>/dev/null || echo "")
+  elif [[ "$TYPE" == "assistant" ]]; then
+    CONTENT=$(echo "$line" | jq -r '.message.content[]?.text // empty' 2>/dev/null | tr '\n' ' ' || echo "")
+  else
+    CONTENT=""
+  fi
 
   # DEBUG: Log each message
   echo "DEBUG: LINE TYPE=$TYPE" >> /tmp/preflight-debug.log
