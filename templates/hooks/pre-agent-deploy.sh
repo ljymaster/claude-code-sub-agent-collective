@@ -218,8 +218,15 @@ fi
 source "$LIB_DIR/memory.sh" || { echo "ERROR: Unable to source memory.sh" >&2; exit 0; }
 
 # Mark task as in-progress (deterministic operation, logged!)
-with_memory_lock "$TASKS_INDEX" memory_update_json "$TASKS_INDEX" \
-  ".tasks[] |= if .id == \"$TASK_ID\" then .status=\"in-progress\" else . end" || true
+# CRITICAL: Do not hide status update errors - failures should block deployment
+if ! with_memory_lock "$TASKS_INDEX" memory_update_json "$TASKS_INDEX" \
+  ".tasks[] |= if .id == \"$TASK_ID\" then .status=\"in-progress\" else . end"; then
+  echo "ERROR: Failed to mark task $TASK_ID as in-progress" >&2
+  cat <<JSON
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Failed to update task status to in-progress"}}
+JSON
+  exit 2
+fi
 
 log_hook_event "PreToolUse" "Task" "$TASK_ID" "allow" "Leaf task, dependencies satisfied, marked in-progress" '{"isLeaf":true,"depsSatisfied":true,"statusUpdated":"in-progress"}'
 

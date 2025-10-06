@@ -139,7 +139,11 @@ if [[ "$tests_pass" == true && "$deliverables_exist" == true ]]; then
     ".tasks[] |= if .id == \"$TASK_ID\" then .status=\"done\" else . end"
 
   # Roll up via wbs-helpers.sh (LOGGED!)
-  propagate_status_up "$TASK_ID" || true
+  # CRITICAL: Do not hide rollup errors - failures should block completion
+  if ! propagate_status_up "$TASK_ID"; then
+    echo "ERROR: Failed to propagate status for task $TASK_ID" >&2
+    exit 1
+  fi
 
   # Check if this task completion means a feature is done (requires validation)
   AGENT=$(jq -r ".tasks[] | select(.id==\"$TASK_ID\") | .agent // empty" "$TASKS_INDEX" 2>/dev/null || echo "")
