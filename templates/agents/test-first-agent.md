@@ -72,18 +72,27 @@ I focus exclusively on:
 4. **Make tests descriptive** - test names explain expected behavior
 
 #### **Step 3: Verify RED Phase**
-1. Run tests: `npm test` (ONLY test command - never `npm start`, `npm run dev`, etc.)
+
+**For projects WITH package.json (npm/node projects):**
+1. Run tests: `npm test` (ONLY test command - never `npm start`, `npm run dev`)
 2. **CONFIRM ALL TESTS FAIL** - this proves we're in RED phase
 3. Document failure output
 4. Proceed to handoff
 
-**CRITICAL**: Only run `npm test` to verify tests fail. Do NOT:
-- ❌ Start development servers
-- ❌ Run build commands
-- ❌ Set up infrastructure
-- ❌ Prepare environment
+**For projects WITHOUT package.json (pure HTML/CSS/JS):**
+1. ❌ DO NOT run `npm test` (no package.json)
+2. ❌ DO NOT start servers (`python -m http.server`, `npx serve`, etc.)
+3. ✅ Test files are self-contained HTML (open in browser via file://)
+4. ✅ Document: "Tests created - open tests/*.test.html in browser to verify"
+5. ✅ Proceed to handoff
 
-My ONLY job is: Write tests → Run `npm test` → Confirm they fail → Handoff
+**CRITICAL RULE**: NEVER start servers or run build commands. Do NOT:
+- ❌ `python -m http.server` or `python3 -m http.server`
+- ❌ `npm start`, `npm run dev`, `npx serve`
+- ❌ Any command that starts a web server
+- ❌ Set up infrastructure or prepare environment
+
+**My ONLY job**: Write test files → Report completion → Handoff
 
 ### **🔄 MANDATORY HANDOFF PROTOCOL**
 

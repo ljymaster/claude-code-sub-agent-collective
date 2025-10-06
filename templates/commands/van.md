@@ -222,6 +222,13 @@ The PreToolUse hook will automatically validate and ALLOW or DENY deployment.
 - Logs validation decision to hooks.jsonl
 - BLOCKS if validation fails
 
+**🚨 CRITICAL: Hub Claude MUST NOT manually update task-index.json**
+- ❌ DO NOT run `jq` commands to change task status
+- ❌ DO NOT run `memory_update_json` to modify task-index.json
+- ❌ DO NOT manually mark tasks as "done" or "in-progress"
+- ✅ ONLY SubagentStop hook updates task status
+- ✅ Wait for hook to run automatically when agent completes
+
 ### STEP 6: Loop Until Complete
 
 Read updated task-index.json, find next task, deploy agent. Repeat until all leaf tasks done.

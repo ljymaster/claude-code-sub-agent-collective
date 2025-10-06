@@ -56,16 +56,27 @@ mcp__task-master__get_task --id=<PROVIDED_ID> --projectRoot=/mnt/h/Active/taskma
 5. **Stop when all tests pass** - do not over-engineer
 
 #### **Step 3: Verify GREEN Phase**
+
+**For projects WITH package.json (npm/node projects):**
 1. **Run all tests**: `npm test`
 2. **Confirm ALL tests PASS**
 3. **No test modifications allowed** - only implementation code
 4. **Proceed to handoff**
 
+**For projects WITHOUT package.json (pure HTML/CSS/JS):**
+1. ❌ DO NOT run `npm test` (no package.json)
+2. ❌ DO NOT start servers (`python -m http.server`, `python3 -m http.server`, `npx serve`, etc.)
+3. ✅ Implementation files are complete (index.html, styles.css, script.js)
+4. ✅ Document: "Implementation complete - open index.html in browser to test"
+5. ✅ Proceed to handoff
+
 **🚨 CRITICAL RULES:**
 - ❌ NEVER write or modify test files
 - ❌ NEVER delete or skip tests
+- ❌ NEVER start HTTP servers or development servers
+- ❌ NEVER run `python -m http.server`, `npm start`, `npm run dev`, etc.
 - ✅ ONLY write implementation code
-- ✅ Make ALL existing tests pass
+- ✅ Make ALL existing tests pass (or document completion for HTML projects)
 - ✅ Follow test requirements exactly
 
 ### **🚀 EXECUTION PROCESS**
