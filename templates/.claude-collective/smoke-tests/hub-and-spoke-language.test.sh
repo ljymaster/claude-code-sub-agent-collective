@@ -46,7 +46,7 @@ echo "TEST 1: Van.md architectural language validation"
 
 # Test that van.md doesn't contain problematic language
 test_no_execute_through_agents() {
-    local VAN_MD="templates/commands/van.md"
+    local VAN_MD=".claude/commands/van.md"
 
     # Check for "execute/executing through agents" (architectural violation)
     if grep -qi "execut.*through.*agent" "$VAN_MD"; then
@@ -70,7 +70,7 @@ echo "TEST 2: Van.md uses correct hub-centric language"
 
 # Test that van.md emphasizes Hub control
 test_hub_centric_language() {
-    local VAN_MD="templates/commands/van.md"
+    local VAN_MD=".claude/commands/van.md"
 
     # Should contain "deploy agent" (Hub deploys)
     if ! grep -q "deploy.*agent" "$VAN_MD"; then
@@ -137,7 +137,7 @@ echo "TEST 5: No TodoWrite instructions with wrong language"
 
 # Test that there are no TodoWrite instructions creating problematic todos
 test_no_bad_todowrite() {
-    local VAN_MD="templates/commands/van.md"
+    local VAN_MD=".claude/commands/van.md"
 
     # Should not instruct creating todos with "executing through agents"
     if grep -qi "TodoWrite.*execut.*through" "$VAN_MD"; then
@@ -155,7 +155,7 @@ echo "TEST 6: Correct terminology in examples"
 
 # Test that examples use correct terminology
 test_example_terminology() {
-    local VAN_MD="templates/commands/van.md"
+    local VAN_MD=".claude/commands/van.md"
 
     # Examples should show "Hub deploys agent" not "execute through agent"
     # Check for presence of correct patterns
