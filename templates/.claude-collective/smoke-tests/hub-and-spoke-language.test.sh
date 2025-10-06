@@ -112,7 +112,7 @@ echo "TEST 4: Agent files don't claim to execute tasks"
 
 # Test that agent files use correct language (agents implement, not execute)
 test_agent_language() {
-    local AGENT_DIR="templates/agents"
+    local AGENT_DIR=".claude/agents"
 
     # Agents should "implement" tasks, not "execute" them
     # (Hub executes workflow, agents implement specific tasks)
