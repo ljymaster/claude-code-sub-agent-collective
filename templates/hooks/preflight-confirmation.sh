@@ -30,6 +30,12 @@ fi
 # Extract transcript path
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || echo "")
 
+# DEBUG: Log what we received
+echo "DEBUG: Full INPUT:" >> /tmp/preflight-debug.log
+echo "$INPUT" >> /tmp/preflight-debug.log
+echo "DEBUG: TRANSCRIPT_PATH=$TRANSCRIPT_PATH" >> /tmp/preflight-debug.log
+echo "DEBUG: File exists check: $(test -f "$TRANSCRIPT_PATH" && echo 'YES' || echo 'NO')" >> /tmp/preflight-debug.log
+
 if [[ -z "$TRANSCRIPT_PATH" || ! -f "$TRANSCRIPT_PATH" ]]; then
   log_hook_event "PreToolUse" "Bash" "" "deny" "No transcript available for validation" "{\"transcriptPath\":\"$TRANSCRIPT_PATH\"}" 2>/dev/null || true
   cat <<JSON
@@ -56,6 +62,10 @@ WAITING_FOR_BROWSER_ANSWER=false
 while IFS= read -r line; do
   TYPE=$(echo "$line" | jq -r '.type // empty' 2>/dev/null || echo "")
   CONTENT=$(echo "$line" | jq -r '.content // empty' 2>/dev/null || echo "")
+
+  # DEBUG: Log each message
+  echo "DEBUG: LINE TYPE=$TYPE" >> /tmp/preflight-debug.log
+  echo "DEBUG: LINE CONTENT=$CONTENT" >> /tmp/preflight-debug.log
 
   # Check if assistant asked about logging
   if [[ "$TYPE" == "assistant" ]] && echo "$CONTENT" | grep -qi "Enable deterministic logging"; then
@@ -87,6 +97,14 @@ while IFS= read -r line; do
     fi
   fi
 done < "$TRANSCRIPT_PATH"
+
+# DEBUG: Log what we found
+echo "DEBUG: ASSISTANT_ASKED_LOGGING=$ASSISTANT_ASKED_LOGGING" >> /tmp/preflight-debug.log
+echo "DEBUG: ASSISTANT_ASKED_BROWSER=$ASSISTANT_ASKED_BROWSER" >> /tmp/preflight-debug.log
+echo "DEBUG: USER_ANSWERED_LOGGING=$USER_ANSWERED_LOGGING" >> /tmp/preflight-debug.log
+echo "DEBUG: USER_ANSWERED_BROWSER=$USER_ANSWERED_BROWSER" >> /tmp/preflight-debug.log
+echo "DEBUG: LOGGING_ARG=$LOGGING_ARG" >> /tmp/preflight-debug.log
+echo "DEBUG: BROWSER_ARG=$BROWSER_ARG" >> /tmp/preflight-debug.log
 
 # Validation checks
 DENIAL_REASON=""
