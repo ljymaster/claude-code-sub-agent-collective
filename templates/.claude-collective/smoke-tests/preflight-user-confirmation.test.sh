@@ -62,12 +62,13 @@ echo "TEST 1: Deny preflight with no transcript (fabricated)"
 # Test that preflight is denied when no user messages in transcript
 test_no_user_messages() {
     # Create fake transcript with only assistant messages (no user interaction)
+    # Using real Claude Code transcript format
     local TRANSCRIPT=".claude/memory/test-transcripts/fabricated.jsonl"
     cat > "$TRANSCRIPT" << 'EOF'
-{"type":"assistant","content":"📊 Enable deterministic logging? (y/n)"}
-{"type":"assistant","content":"User answered: n"}
-{"type":"assistant","content":"🌐 Enable browser testing? (y/n)"}
-{"type":"assistant","content":"User answered: y"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"📊 Enable deterministic logging? (y/n)"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"User answered: n"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"🌐 Enable browser testing? (y/n)"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"User answered: y"}]}}
 EOF
 
     # Try to run preflight - hook should DENY
@@ -96,13 +97,14 @@ echo "TEST 2: Allow preflight with actual user messages"
 # Test that preflight is allowed when real user messages exist
 test_real_user_messages() {
     # Create transcript with actual user messages
+    # Using real Claude Code transcript format
     local TRANSCRIPT=".claude/memory/test-transcripts/real.jsonl"
     cat > "$TRANSCRIPT" << 'EOF'
-{"type":"assistant","content":"📊 Enable deterministic logging? (y/n)"}
-{"type":"user","content":"n"}
-{"type":"assistant","content":"🌐 Enable browser testing? (y/n)"}
-{"type":"user","content":"y"}
-{"type":"assistant","content":"Now running preflight with your answers..."}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"📊 Enable deterministic logging? (y/n)"}]}}
+{"type":"user","message":{"role":"user","content":"n"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"🌐 Enable browser testing? (y/n)"}]}}
+{"type":"user","message":{"role":"user","content":"y"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Now running preflight with your answers..."}]}}
 EOF
 
     # Try to run preflight - hook should ALLOW
@@ -131,12 +133,13 @@ echo "TEST 3: Deny preflight with wrong answer sequence"
 # Test that preflight is denied when answers don't match transcript
 test_wrong_answers() {
     # Create transcript where user said "y" for logging
+    # Using real Claude Code transcript format
     local TRANSCRIPT=".claude/memory/test-transcripts/wrong.jsonl"
     cat > "$TRANSCRIPT" << 'EOF'
-{"type":"assistant","content":"📊 Enable deterministic logging? (y/n)"}
-{"type":"user","content":"y"}
-{"type":"assistant","content":"🌐 Enable browser testing? (y/n)"}
-{"type":"user","content":"n"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"📊 Enable deterministic logging? (y/n)"}]}}
+{"type":"user","message":{"role":"user","content":"y"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"🌐 Enable browser testing? (y/n)"}]}}
+{"type":"user","message":{"role":"user","content":"n"}}
 EOF
 
     # Try to run preflight with DIFFERENT answers - hook should DENY
