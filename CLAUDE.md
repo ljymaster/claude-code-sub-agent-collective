@@ -405,6 +405,394 @@ npx . clean               # Test cleanup functionality
 - Contract validation ensures agent compatibility
 - Installation tests verify NPX package integrity
 
+## TDD-Based Issue Remediation Framework
+
+### When to Use This Framework
+
+Apply this systematic approach when:
+- **Fixing reported bugs** in hooks, agents, or core systems
+- **Implementing new features** that could break existing behavior
+- **Refactoring critical paths** like task management or validation logic
+- **Addressing user feedback** about workflow failures
+
+### The RED-GREEN-REFACTOR Cycle
+
+**Core Principle**: Write the test FIRST, watch it FAIL, then fix the code.
+
+#### Phase 1: RED (Write Failing Test)
+
+1. **Create smoke test file** in `templates/.claude-collective/smoke-tests/`:
+   ```bash
+   # Naming convention: [component]-[issue].test.sh
+   # Examples:
+   # - subagent-stop-reliability.test.sh
+   # - tdd-gate-completion.test.sh
+   # - task-id-extraction.test.sh
+   # - hook-error-propagation.test.sh
+   ```
+
+2. **Test structure** (use this template):
+   ```bash
+   #!/bin/bash
+   # Smoke test: [Description of what's being tested]
+   # Validates that [specific behavior or requirement]
+
+   set -euo pipefail
+
+   # Colors
+   GREEN='\033[0;32m'
+   RED='\033[0;31m'
+   YELLOW='\033[1;33m'
+   NC='\033[0m'
+
+   TESTS_PASSED=0
+   TESTS_FAILED=0
+
+   # Test helper
+   test_hook() {
+       local description="$1"
+       local expected_result="$2"  # "pass" or "fail"
+       local test_function="$3"
+
+       # Test logic here
+       # Increment TESTS_PASSED or TESTS_FAILED
+   }
+
+   # Setup/cleanup
+   setup() { ... }
+   cleanup() { ... }
+   trap cleanup EXIT
+
+   # Run tests
+   setup
+   echo "TEST 1: [Description]"
+   test_hook "Specific behavior" "pass" "test_function_name"
+
+   # Summary
+   if [[ $TESTS_FAILED -gt 0 ]]; then
+       exit 1
+   else
+       exit 0
+   fi
+   ```
+
+3. **Test coverage requirements**:
+   - Minimum 3 test cases per smoke test
+   - Cover happy path (expected success)
+   - Cover error path (expected failure)
+   - Cover edge cases (boundary conditions)
+
+4. **Make executable and register**:
+   ```bash
+   chmod +x templates/.claude-collective/smoke-tests/[test-name].test.sh
+   ```
+
+   Add to `lib/file-mapping.js`:
+   ```javascript
+   {
+     file: 'smoke-tests/[test-name].test.sh',
+     required: true,
+     executable: true,
+     description: '[Description] validation smoke test'
+   }
+   ```
+
+5. **Deploy and verify FAILURE**:
+   ```bash
+   ./scripts/test-local.sh 2>&1 | grep -A 20 "[test-name]"
+   ```
+
+   **CRITICAL**: At least one test MUST fail initially. If all tests pass, the test isn't detecting the bug.
+
+#### Phase 2: GREEN (Fix the Code)
+
+1. **Locate the bug** using test failure output:
+   ```bash
+   # Failed test tells you exactly what's broken
+   # Example: "Testing: Extract from .current-task marker ... ❌ FAIL"
+   ```
+
+2. **Fix the root cause** (not symptoms):
+   - Hooks: `templates/hooks/[hook-name].sh`
+   - Libraries: `templates/.claude/memory/lib/[lib-name].sh`
+   - Commands: `templates/commands/[command-name].md`
+   - Agents: `templates/agents/[agent-name].md`
+
+3. **Avoid these anti-patterns**:
+   - ❌ Adding `|| true` to hide errors
+   - ❌ Fixing only the specific test case
+   - ❌ Working around the bug instead of fixing it
+   - ❌ Changing test to match broken behavior
+
+4. **Verify fix**:
+   ```bash
+   ./scripts/test-local.sh 2>&1 | grep -A 20 "[test-name]"
+   # All tests should now pass
+   ```
+
+5. **Verify no regressions**:
+   ```bash
+   ./scripts/test-local.sh 2>&1 | tail -20
+   # Should show: "✅ ALL SMOKE TESTS PASSED"
+   ```
+
+#### Phase 3: COMMIT (Document the Fix)
+
+**Commit message template**:
+```
+test: Add [component] smoke test and fix [issue]
+
+RED Phase (Test First):
+- Created [test-name].test.sh with N test cases
+- TEST X exposed bug: [description of bug]
+- Test failed as expected, proving bug exists
+
+GREEN Phase (Fix):
+- [Description of fix applied]
+- [Specific file and function modified]
+- All N tests now passing
+
+Test Coverage:
+1. [Test case 1 description] ✅
+2. [Test case 2 description] ✅
+3. [Test case 3 description] ✅
+...
+
+Bug Fixed: [High-level description of what's now fixed]
+
+Impact: [What this enables or prevents]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Example commits**: `58be664`, `4d78ba5`, `c6de3e2`, `5af882f` (see git log)
+
+### Real-World Examples
+
+#### Example 1: SubagentStop Reliability (Issue #1)
+
+**Problem**: Hook silently failed when parent task didn't exist in hierarchy.
+
+**RED Phase**:
+```bash
+# Created: subagent-stop-reliability.test.sh
+# TEST 3: Error detection and reporting
+# Result: ❌ FAIL (expected: pass, got: fail)
+```
+
+**GREEN Phase**:
+```bash
+# Fixed: templates/.claude/memory/lib/wbs-helpers.sh
+# Added parent validation to calculate_rollup()
+# Result: ✅ PASS (all 4 tests)
+```
+
+**Impact**: Prevents task hierarchy corruption.
+
+#### Example 2: TDD-Gate Completion Logic (Issue #2)
+
+**Problem**: TDD-gate blocked writes even after epic completion.
+
+**RED Phase**:
+```bash
+# Created: tdd-gate-completion.test.sh
+# TEST 2: Allows writes after epic completion
+# Result: ❌ FAIL (expected: allow, got: deny)
+```
+
+**GREEN Phase**:
+```bash
+# Fixed: templates/hooks/tdd-gate.sh
+# Added epic completion check (allow integration phase)
+# Result: ✅ PASS (all 4 tests)
+```
+
+**Impact**: Enables final integration work after all tasks complete.
+
+#### Example 3: Task ID Extraction (Issue #3)
+
+**Problem**: SubagentStop couldn't extract task ID with complex prompts.
+
+**RED Phase**:
+```bash
+# Created: task-id-extraction.test.sh (5 test cases)
+# All tests passed in isolation (testing correct logic)
+# But hook implementation missing fallback mechanism
+```
+
+**GREEN Phase**:
+```bash
+# Fixed: templates/hooks/subagent-validation.sh
+# Added .current-task marker fallback (3rd extraction method)
+# Added task ID validation (prevents invalid IDs)
+# Updated: templates/commands/van.md (write marker before deployment)
+# Result: ✅ PASS (all 5 tests)
+```
+
+**Impact**: Reliable task extraction even with parallel execution.
+
+#### Example 4: Hook Error Propagation (Issue #4)
+
+**Problem**: Critical errors hidden by `|| true` statements.
+
+**RED Phase**:
+```bash
+# Created: hook-error-propagation.test.sh (6 test cases)
+# Tests validated error handling logic worked
+# Identified 2 critical `|| true` locations hiding errors
+```
+
+**GREEN Phase**:
+```bash
+# Fixed: templates/hooks/subagent-validation.sh (line 142)
+# Removed `|| true` from propagate_status_up
+# Added structured error reporting
+# Fixed: templates/hooks/pre-agent-deploy.sh (line 222)
+# Removed `|| true` from status update
+# Returns structured deny decision on failure
+# Result: ✅ PASS (all 6 tests)
+```
+
+**Impact**: Errors surface immediately instead of corrupting state.
+
+### Smoke Test Organization
+
+**Directory structure**:
+```
+templates/.claude-collective/smoke-tests/
+├── run-all.sh                           # Master test runner
+├── preflight-validation.test.sh         # User input validation
+├── subagent-stop-reliability.test.sh    # Hook reliability
+├── tdd-gate-completion.test.sh          # Completion logic
+├── task-id-extraction.test.sh           # ID extraction
+├── hook-error-propagation.test.sh       # Error handling
+├── tdd-gate-task-aware.test.sh          # Task awareness
+├── van-instructions.test.sh             # Command accuracy
+└── wbs-helpers.test.sh                  # WBS functions
+```
+
+**Naming conventions**:
+- `[component]-[issue].test.sh` - Specific issue tests
+- `[component]-validation.test.sh` - Input/output validation
+- `[component]-reliability.test.sh` - Reliability/consistency tests
+- `[library].test.sh` - Library function tests
+
+### Running Smoke Tests
+
+**During development**:
+```bash
+# Test single suite
+cd /path/to/test/installation
+./.claude-collective/smoke-tests/[test-name].test.sh
+
+# Test all suites
+./.claude-collective/smoke-tests/run-all.sh
+```
+
+**Full deployment test**:
+```bash
+# From repository root
+./scripts/test-local.sh
+
+# Check results
+# Should show: "✅ ALL SMOKE TESTS PASSED"
+```
+
+### Troubleshooting Failed Tests
+
+**If test fails unexpectedly**:
+
+1. **Run with verbose output**:
+   ```bash
+   bash -x ./.claude-collective/smoke-tests/[test-name].test.sh
+   ```
+
+2. **Check test isolation**:
+   - Does setup() create clean state?
+   - Does cleanup() restore original state?
+   - Are tests interdependent (bad)?
+
+3. **Verify test logic**:
+   - Is expected_result correct?
+   - Is the test function testing the right thing?
+   - Are file paths absolute or relative?
+
+4. **Check test environment**:
+   - Does .claude/memory/task-index.json exist?
+   - Are required libraries sourced?
+   - Do marker directories exist?
+
+### Best Practices
+
+1. **Test in isolation**: Each test case should be independent
+2. **Clean state**: Setup creates fresh environment, cleanup restores
+3. **Descriptive names**: Test name should explain what's being validated
+4. **Fail fast**: Use `set -euo pipefail` to catch errors early
+5. **Structured output**: Use color coding and consistent formatting
+6. **No manual intervention**: Tests should run completely automated
+7. **Exit codes**: 0 = all pass, 1 = some failed (for CI/CD)
+
+### Anti-Patterns to Avoid
+
+❌ **Changing test to match bug**:
+```bash
+# WRONG: Test expects broken behavior
+test_hook "Allow invalid task ID" "allow" "test_invalid_id"
+```
+
+✅ **Changing code to match test**:
+```bash
+# CORRECT: Test expects correct behavior
+test_hook "Reject invalid task ID" "deny" "test_invalid_id"
+# Then fix code to make test pass
+```
+
+❌ **Skipping RED phase**:
+```bash
+# WRONG: Fix code first, then write test
+# You don't know if test actually catches the bug
+```
+
+✅ **Always RED first**:
+```bash
+# CORRECT: Write test, see it fail, then fix
+# Proves test actually detects the bug
+```
+
+❌ **Batch fixing multiple issues**:
+```bash
+# WRONG: Fix 4 issues in 1 commit
+# Hard to review, hard to revert, hard to understand
+```
+
+✅ **One issue per commit**:
+```bash
+# CORRECT: 1 smoke test + 1 fix per commit
+# Easy to review, easy to revert, clear history
+```
+
+### Metrics and Quality Indicators
+
+**Good test coverage**:
+- 8+ smoke test suites
+- 35+ individual test cases
+- 100% smoke test pass rate
+- No `|| true` in critical paths
+
+**Signs of quality**:
+- All tests independent (can run in any order)
+- Tests complete in < 5 seconds each
+- Setup/cleanup properly isolate tests
+- Failures provide actionable error messages
+
+**Red flags**:
+- Tests that "sometimes" fail (non-deterministic)
+- Tests requiring manual setup
+- Tests with hardcoded paths outside test directory
+- Tests that modify repository state without cleanup
+
 ## Important Notes
 
 ### Development Environment
