@@ -72,6 +72,7 @@ echo ""
 echo "TEST 2: Task-aware with dependency task DONE"
 
 # Create task structure with dependency task marked as done
+# Implementation task must be "in-progress" for hook to allow it
 cat > .claude/memory/task-index.json << 'EOF'
 {
   "tasks": [
@@ -83,7 +84,7 @@ cat > .claude/memory/task-index.json << 'EOF'
     },
     {
       "id": "smoke-test-2",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": ["smoke-test-1"],
       "deliverables": ["smoke-test-impl.html"]
     }
