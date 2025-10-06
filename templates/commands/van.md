@@ -177,17 +177,27 @@ Starting execution...
 
 ### STEP 2: Find Next Available Task
 
-**ACTION:** Read task-index.json and find the first pending leaf task with satisfied dependencies.
+**ACTION:** Use the `find_next_available_task` helper function to find the first pending leaf task with satisfied dependencies.
 
-A leaf task has no children. Dependencies are satisfied when all dependency task IDs have status="done".
+**REQUIRED STEPS:**
 
-**For reference only, here is example logic (do NOT execute this bash literally - just understand the concept and find the task):**
-```bash
-# Example logic showing WHAT to look for:
-# - Task with no children
-# - Status is "pending"
-# - All dependencies have status="done"
-```
+1. **Source the helper library and call the function:**
+   ```bash
+   source .claude/memory/lib/wbs-helpers.sh && find_next_available_task
+   ```
+
+2. **The function will return:**
+   - Task ID (e.g., "1.1.1") if an available task is found
+   - Exit code 1 if no tasks available
+
+**Function behavior:**
+- Finds pending leaf tasks (no children)
+- Validates all dependencies have status="done"
+- Returns first available task ID
+
+**If you need details on the task system, consult:**
+- `.claude-collective/task-system.md` - Complete task system documentation
+- `.claude/memory/lib/wbs-helpers.sh` - Available helper functions
 
 ### STEP 3: Deploy Agent for Task
 
