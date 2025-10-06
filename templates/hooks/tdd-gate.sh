@@ -76,12 +76,15 @@ if [[ -f "$TASK_INDEX" ]]; then
         exit 0
     fi
 
-    # Find task that has this file as a deliverable
-    CURRENT_TASK=$(jq -r --arg file "$FILE_PATH" '.tasks[] | select(.deliverables[]? == $file) | .id' "$TASK_INDEX" 2>/dev/null | head -1)
+    # Find in-progress task (agent is actively working)
+    IN_PROGRESS_TASK=$(jq -r '.tasks[] | select(.status=="in-progress") | .id' "$TASK_INDEX" 2>/dev/null | head -1)
 
-    if [[ -n "$CURRENT_TASK" ]]; then
-        # Task-aware: Check dependency tasks for test deliverables
-        DEPENDENCIES=$(jq -r --arg taskid "$CURRENT_TASK" '.tasks[] | select(.id == $taskid) | .dependencies[]? // empty' "$TASK_INDEX" 2>/dev/null)
+    if [[ -n "$IN_PROGRESS_TASK" ]]; then
+        # Check if file is explicitly listed as deliverable
+        TASK_HAS_FILE=$(jq -r --arg file "$FILE_PATH" --arg taskid "$IN_PROGRESS_TASK" '.tasks[] | select(.id == $taskid) | .deliverables[]? // empty | select(. == $file)' "$TASK_INDEX" 2>/dev/null)
+
+        # Get task dependencies (test tasks)
+        DEPENDENCIES=$(jq -r --arg taskid "$IN_PROGRESS_TASK" '.tasks[] | select(.id == $taskid) | .dependencies[]? // empty' "$TASK_INDEX" 2>/dev/null)
 
         if [[ -n "$DEPENDENCIES" ]]; then
             # Check if all dependency tasks are complete (status="done")
@@ -99,17 +102,21 @@ if [[ -f "$TASK_INDEX" ]]; then
             done
 
             if [[ "$ALL_DEPS_DONE" = true ]]; then
-                # All dependencies complete - allow implementation
+                # All dependencies complete - allow ANY file for this task (not just deliverables)
                 TEST_FOUND=true
-                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: All dependency tasks complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+                if [[ -n "$TASK_HAS_FILE" ]]; then
+                    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: File in deliverables, dependencies complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+                else
+                    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Active task, dependencies complete (implicit deliverable)" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"dependencies\":\"$DEPENDENCIES\"}"
+                fi
             else
                 # Dependencies not complete - deny
-                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task dependencies not complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"incompleteDeps\":\"$INCOMPLETE_DEPS\"}"
+                log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task dependencies not complete" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"incompleteDeps\":\"$INCOMPLETE_DEPS\"}"
                 echo "{
                     \"hookSpecificOutput\": {
                         \"hookEventName\": \"PreToolUse\",
                         \"permissionDecision\": \"deny\",
-                        \"permissionDecisionReason\": \"🚨 TDD VIOLATION\\n\\nTask ${CURRENT_TASK} has incomplete dependencies:${INCOMPLETE_DEPS}\\n\\nThese dependency tasks must complete before implementation can proceed.\\n\\n❌ Cannot proceed - dependency tasks not done\\n\\n💡 Solution: Complete dependency tasks first (tests must be written before implementation)\"
+                        \"permissionDecisionReason\": \"🚨 TDD VIOLATION\\n\\nTask ${IN_PROGRESS_TASK} has incomplete dependencies:${INCOMPLETE_DEPS}\\n\\nThese dependency tasks must complete before implementation can proceed.\\n\\n❌ Cannot proceed - dependency tasks not done\\n\\n💡 Solution: Complete dependency tasks first (tests must be written before implementation)\"
                     }
                 }"
                 exit 0
@@ -117,7 +124,7 @@ if [[ -f "$TASK_INDEX" ]]; then
         else
             # No dependencies = this is a test task itself, allow
             TEST_FOUND=true
-            log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Test task (no dependencies)" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$CURRENT_TASK\",\"taskType\":\"test\"}"
+            log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "allow" "Task-aware: Test task (no dependencies)" "{\"file\":\"$FILE_PATH\",\"currentTask\":\"$IN_PROGRESS_TASK\",\"taskType\":\"test\"}"
         fi
     fi
 fi
@@ -130,13 +137,40 @@ if [ "$TEST_FOUND" = true ]; then
     exit 0
 else
     # Not in task workflow OR file not part of task structure
-    log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "TDD violation: Must use task-based workflow" "{\"file\":\"$FILE_PATH\",\"taskWorkflow\":false,\"taskIndexExists\":$(test -f \"$TASK_INDEX\" && echo true || echo false)}"
-    echo "{
-        \"hookSpecificOutput\": {
-            \"hookEventName\": \"PreToolUse\",
-            \"permissionDecision\": \"deny\",
-            \"permissionDecisionReason\": \"🚨 TDD VIOLATION: Task-based workflow required\\n\\nFile: ${FILE_NAME}\\n\\nThis implementation file is not part of the current task structure.\\n\\nAll implementation must be part of a task-based workflow with proper dependencies.\\n\\n❌ Cannot proceed\\n\\n💡 Solution: Use /van command to create task-based workflow with proper test dependencies\"
-        }
-    }"
+    # Check if task index exists to provide better guidance
+    if [[ -f "$TASK_INDEX" ]]; then
+        # Task index exists but no in-progress task found
+        AVAILABLE_TASKS=$(jq -r '.tasks[] | select(.status=="pending" and (.children | length) == 0) | .id' "$TASK_INDEX" 2>/dev/null | head -3 | tr '\n' ', ' | sed 's/,$//')
+
+        if [[ -n "$AVAILABLE_TASKS" ]]; then
+            log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "No in-progress task - available tasks exist" "{\"file\":\"$FILE_PATH\",\"availableTasks\":\"$AVAILABLE_TASKS\"}"
+            echo "{
+                \"hookSpecificOutput\": {
+                    \"hookEventName\": \"PreToolUse\",
+                    \"permissionDecision\": \"deny\",
+                    \"permissionDecisionReason\": \"⚠️ No active task for file: ${FILE_NAME}\\n\\nFile needs to be part of a task workflow.\\n\\nAvailable pending tasks: ${AVAILABLE_TASKS}\\n\\n💡 Next steps:\\n1. Deploy agent for next task via Task tool\\n2. OR add ${FILE_NAME} to existing task deliverables\\n3. OR ask Hub Claude to update task structure\"
+                }
+            }"
+        else
+            log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "Task index exists but all tasks complete or in-progress" "{\"file\":\"$FILE_PATH\",\"taskWorkflow\":false}"
+            echo "{
+                \"hookSpecificOutput\": {
+                    \"hookEventName\": \"PreToolUse\",
+                    \"permissionDecision\": \"deny\",
+                    \"permissionDecisionReason\": \"⚠️ No active task for file: ${FILE_NAME}\\n\\nAll tasks complete or no pending tasks available.\\n\\n💡 Next steps:\\n1. Check task status: source .claude/memory/lib/wbs-helpers.sh && find_next_available_task\\n2. Add new task if needed\\n3. OR this might be integration work after epic completion\"
+                }
+            }"
+        fi
+    else
+        # No task index - workflow not initialized
+        log_hook_event "PreToolUse" "$TOOL_NAME" "$FILE_PATH" "deny" "TDD violation: Task workflow not initialized" "{\"file\":\"$FILE_PATH\",\"taskWorkflow\":false,\"taskIndexExists\":false}"
+        echo "{
+            \"hookSpecificOutput\": {
+                \"hookEventName\": \"PreToolUse\",
+                \"permissionDecision\": \"deny\",
+                \"permissionDecisionReason\": \"⚠️ Task workflow not initialized\\n\\nFile: ${FILE_NAME}\\n\\n💡 Solution: Use /van command to start task-based workflow with TDD enforcement\"
+            }
+        }"
+    fi
     exit 0
 fi
