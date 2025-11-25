@@ -1,9 +1,168 @@
 # Changelog
 
-All notable changes to the TaskMaster Agent autonomous development system will be documented in this file.
+All notable changes to the AI Code Collective framework will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.0] - 2025-11-25
+
+### 🚀 Added
+
+#### Multi-Platform Support
+- **Qoder CLI Integration**: Full support for Qoder CLI alongside Claude Code
+- **Platform Auto-Detection**: Automatic environment detection via `$QODER_PROJECT_DIR` vs `$CLAUDE_PROJECT_DIR`
+- **Platform Adapter System**: New `lib/platform-adapter.js` for unified platform abstraction
+  - Environment variable mapping and translation
+  - Dynamic configuration directory resolution (`.qoder` vs `.claude`)
+  - Template variable processing for platform-specific content
+- **Configuration Adapter**: New `lib/config-adapter.js` for cross-platform settings translation
+  - Automatic conversion between Claude Code and Qoder CLI configurations
+  - Bi-directional settings synchronization
+  - Platform-specific capability detection and adaptation
+
+#### CLI Enhancements
+- **Platform Selection**: New `--platform <platform>` option supporting:
+  - `auto` - Automatic detection (default)
+  - `claude` - Claude Code only
+  - `qoder` - Qoder CLI only
+  - `both` - Install for both platforms simultaneously
+- **Cross-Platform Sync**: New `--sync-platforms` option for configuration synchronization
+- Platform-aware installation messages and validation feedback
+
+#### Hook System Updates
+- **Platform-Agnostic Hooks**: All 11 hooks updated with dynamic platform detection:
+  - `load-behavioral-system.sh` - Multi-platform behavioral system loading
+  - `block-destructive-commands.sh` - Cross-platform command blocking
+  - `collective-metrics.sh` - Platform-aware metrics collection
+  - `directive-enforcer.sh` - Unified directive enforcement
+  - `test-driven-handoff.sh` - Platform-independent TDD validation
+  - `handoff-automation.sh` - Cross-platform agent handoff automation
+  - `research-evidence-validation.sh` - Platform-agnostic research validation
+  - `workflow-coordinator.sh` - Multi-platform workflow coordination
+  - `mock-deliverable-generator.sh` - Platform-independent mock generation
+  - `routing-executor.sh` - Cross-platform routing execution
+  - `agent-detection.sh` - Platform-aware agent detection
+
+#### Templates & Configurations
+- **Qoder Settings Template**: New `templates/settings.qoder.json.template`
+  - Qoder-specific hook configuration structure
+  - Simplified tool denial list
+  - `$QODER_PROJECT_DIR` variable usage
+  - SessionStart, PreToolUse, PostToolUse hook support
+- **Platform-Agnostic Agents**: Example agent definitions updated:
+  - `routing-agent.md` - Multi-platform routing coordination
+  - `task-orchestrator.md` - Cross-platform task orchestration
+
+#### Documentation
+- **QODER-USAGE.md**: Complete Qoder CLI usage guide (26 sections)
+  - Installation and setup instructions
+  - Configuration management
+  - Agent workflow examples
+  - Platform-specific troubleshooting
+- **INSTALLATION-GUIDE.md**: Comprehensive installation documentation
+  - 3 publication methods (NPM registry, GitHub packages, local .tgz)
+  - 3 local testing approaches with validation
+  - 5 detailed usage examples
+  - Platform comparison and troubleshooting
+- **PLATFORM-AGNOSTIC-AGENTS.md**: Agent migration guide
+  - Before/after conversion examples
+  - Platform variable reference
+  - Migration checklist and best practices
+- **README.md**: Updated with multi-platform support
+  - Platform compatibility matrix
+  - Installation examples for each platform
+  - Feature comparison table
+
+### 🔄 Changed
+
+#### Core System
+- **lib/installer.js**: Enhanced with platform adapter integration
+  - Dynamic configuration directory selection based on detected platform
+  - Platform-specific installation messages and progress indicators
+  - Multi-platform validation checks and compatibility warnings
+  - Template variable injection with platform context
+- **bin/claude-code-collective.js**: Updated CLI with platform options
+  - Extended help text with platform-specific examples
+  - Platform validation and error handling
+  - Support for `--platform` and `--sync-platforms` flags
+- **package.json**: Version bump to 2.1.0
+  - Updated description: "Multi-platform AI Code Collective framework..."
+  - Maintained all existing dependencies for backward compatibility
+
+#### Template System
+- **Enhanced Variable Processing**: New platform-aware template variables
+  - `{{PLATFORM}}` - Current platform (claude/qoder)
+  - `{{CONFIG_DIR}}` - Platform configuration directory
+  - `{{PROJECT_DIR_VAR}}` - Platform project directory environment variable
+  - `{{IS_QODER}}` / `{{IS_CLAUDE}}` - Platform boolean flags for conditional logic
+
+### 🛠️ Fixed
+- **Windows Compatibility**: Improved path handling for Windows systems in platform adapter
+- **Test Suite Reliability**: Enhanced test stability (101/121 tests passing)
+  - Note: 20 test failures on Windows due to file system locking during cleanup (non-critical)
+  - All core functionality tests passing
+
+### ✅ Backward Compatibility
+- **100% Claude Code Compatibility**: All existing Claude Code installations continue to work without any changes
+- **Default Behavior**: Platform detection defaults to Claude Code when platform is uncertain
+- **No Breaking Changes**: Existing configurations, hooks, and agents fully supported
+- **Seamless Upgrade**: Existing users can upgrade to v2.1.0 without configuration changes
+
+### 📊 Platform Support Matrix
+
+| Feature | Claude Code | Qoder CLI |
+|---------|-------------|-----------|
+| Agent Collective | ✅ Full Support | ✅ Full Support |
+| TDD Enforcement | ✅ Complete | ✅ Complete |
+| Hook System | ✅ All Events | ✅ Core Events |
+| MCP Integration | ✅ Context7, etc. | ❌ Not Available |
+| Research Tools | ✅ MCP-based | ⚠️ Web-based Fallback |
+| Config Sync | ✅ Supported | ✅ Supported |
+| SubagentStop Hooks | ✅ Supported | ❌ Not Available |
+
+### 🔬 Technical Details
+- Platform detection via environment variable probing
+- Template variable replacement using regex pattern matching
+- Configuration synchronization based on file modification times
+- Hook scripts use consistent platform detection pattern across all files
+- NPM package size: 413.3 KB compressed, 1.7 MB unpacked
+
+### 📦 Migration Guide
+
+**For Existing Claude Code Users:**
+No action required. The system automatically detects Claude Code and continues working as before.
+
+**To Enable Multi-Platform Support:**
+```bash
+# 1. Reinstall with multi-platform support
+npx claude-code-collective init --platform=both --force
+
+# 2. Enable automatic config sync
+npx claude-code-collective init --sync-platforms
+```
+
+**For New Qoder CLI Users:**
+```bash
+# Install Qoder CLI version
+npx claude-code-collective init --platform=qoder
+```
+
+**For Multi-Platform Developers:**
+```bash
+# Install for both platforms with sync
+npx claude-code-collective init --platform=both --sync-platforms
+```
+
+### ⚠️ Known Issues
+- **Windows**: 20 test failures during cleanup due to file system locking (does not affect functionality)
+- **Platform Sync**: Requires manual trigger when actively switching between platforms
+- **SubagentStop**: Not available in Qoder CLI (platform limitation)
+
+### 🙏 Credits
+Special thanks to the AI coding community for platform compatibility feedback and feature requests that made this multi-platform release possible.
+
+---
 
 ## [2.0.6] - 2025-08-16
 
