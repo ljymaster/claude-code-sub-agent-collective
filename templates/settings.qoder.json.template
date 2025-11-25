@@ -1,0 +1,73 @@
+{
+  "deniedTools": [],
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/load-behavioral-system.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/load-behavioral-system.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/block-destructive-commands.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/directive-enforcer.sh"
+          },
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/collective-metrics.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/test-driven-handoff.sh"
+          },
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/collective-metrics.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QODER_PROJECT_DIR/{{CONFIG_DIR}}/hooks/collective-metrics.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

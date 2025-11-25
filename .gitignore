@@ -1,0 +1,104 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+dev-debug.log
+
+# Dependency directories
+node_modules/
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vercel
+.vercel
+
+# Build outputs
+build/
+out/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Temporary folders
+tmp/
+temp/
+
+# Test artifacts and backups
+*.backup
+*-test.log
+maintenance-test.log
+test-backups/
+collective-metrics.log
+delegation-test.log
+
+# AI documentation and strategizing (PRIVATE)
+ai-docs/
+
+# IDE-specific config files (PRIVATE)
+.cursor/
+.roo/
+.vite/
+.roomodes
+.windsurfrules
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Development and testing directories
+implementation/
+coverage/
+maintenance-reports/
+
+# NPX package test artifacts  
+claude-code-collective/.test-metrics*
+claude-code-collective/.claude-collective/metrics/sessions/
+claude-code-collective/.claude-collective/metrics/snapshots/
+
+/review/*
+
+.vscode
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 
+.claude-collective/metrics/
