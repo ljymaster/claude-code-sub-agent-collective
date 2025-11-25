@@ -69,15 +69,42 @@ So I built agents that:
 
 ## Installation options
 
-### Quick install (auto-detects platform)
+### 🚀 从 GitHub 安装（推荐）
+
 ```bash
-npx claude-code-collective init
+# 全局安装（可在任意项目使用）
+npm install -g https://github.com/ljymaster/claude-code-sub-agent-collective.git
+
+# 在项目中初始化（支持 Qoder CLI）
+cd /path/to/your/project
+ccc init --yes --platform=qoder
+
+# 验证安装
+ccc status
+```
+
+**可用命令：**
+- `ccc` - 短命令（推荐）
+- `claude-code-collective-v2` - 完整命令
+
+**与旧版本并存**: 本包使用 `@ljymaster/claude-code-collective` 包名，可与旧版本 `claude-code-collective` 完美并存。详见 [并存指南](./docs/COEXISTENCE-GUIDE.md)
+
+**详细指南**: [GitHub 安装完整指南](./docs/GITHUB-INSTALL-GUIDE.md)
+
+### 📦 从 NPM 安装（如已发布）
+
+```bash
+# 全局安装
+npm install -g @ljymaster/claude-code-collective
+
+# 或使用 npx（无需安装）
+npx @ljymaster/claude-code-collective init
 ```
 
 ### Platform-specific installation
 ```bash
 # For Claude Code only
-npx claude-code-collective init --platform=claude
+ccc init --platform=claude
 
 # For Qoder CLI only  
 npx claude-code-collective init --platform=qoder

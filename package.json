@@ -1,10 +1,11 @@
 {
-  "name": "claude-code-collective",
+  "name": "@ljymaster/claude-code-collective",
   "version": "2.1.0",
   "description": "Multi-platform AI Code Collective framework with TDD validation, hub-spoke coordination for Claude Code and Qoder CLI",
   "main": "lib/index.js",
   "bin": {
-    "claude-code-collective": "./bin/claude-code-collective.js"
+    "ccc": "./bin/claude-code-collective.js",
+    "claude-code-collective-v2": "./bin/claude-code-collective.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -33,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/claude-code-sub-agent-collective.git"
+    "url": "https://github.com/ljymaster/claude-code-sub-agent-collective.git"
   },
   "engines": {
     "node": ">=16.0.0"
